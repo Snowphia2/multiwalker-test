@@ -1,5 +1,5 @@
 [project]
-name = "mw-skill"
+name = "mw_skill"
 version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
@@ -35,6 +35,8 @@ dependencies = [
   "httpx[socks]>=0.28.1",
   "harl",
 ]
-
 [tool.uv.sources]
-harl = { path = "HARL" }
+harl = { workspace = true }
+
+[tool.uv.workspace]
+members = ["HARL"]

@@ -1,6 +1,6 @@
-from algo_base import AlgorithmAbstractConfig
+from .algo_type import AlgorithmAbstractConfig
 from dataclasses import dataclass
-from online_base import OnlineTrainConfig, OnlineModelConfig
+from .online_type import OnlineTrainConfig, OnlineModelConfig
 from typing import Literal
 
 

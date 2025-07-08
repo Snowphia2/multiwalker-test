@@ -6,6 +6,12 @@ resolution-markers = [
     "sys_platform != 'linux'",
 ]
 
+[manifest]
+members = [
+    "harl",
+    "mw-skill",
+]
+
 [[package]]
 name = "absl-py"
 version = "2.3.1"
@@ -607,23 +613,12 @@ wheels = [
 [[package]]
 name = "harl"
 version = "1.0.0"
-source = { directory = "HARL" }
-dependencies = [
-    { name = "pyyaml" },
-    { name = "setproctitle" },
-    { name = "tensorboard" },
-    { name = "tensorboardx" },
-    { name = "torch" },
-]
+source = { editable = "HARL" }
 
 [package.metadata]
-requires-dist = [
-    { name = "pyyaml", specifier = ">=5.3.1" },
-    { name = "setproctitle" },
-    { name = "tensorboard", specifier = ">=2.2.1" },
-    { name = "tensorboardx" },
-    { name = "torch", specifier = ">=1.9.0" },
-]
+
+[package.metadata.requires-dev]
+dev = []
 
 [[package]]
 name = "httpcore"
@@ -1187,7 +1182,7 @@ dependencies = [
 requires-dist = [
     { name = "asyncio", specifier = ">=3.4.3" },
     { name = "dotenv", specifier = ">=0.9.9" },
-    { name = "harl", directory = "HARL" },
+    { name = "harl", editable = "HARL" },
     { name = "httpx", extras = ["socks"], specifier = ">=0.28.1" },
     { name = "hydra-ax-sweeper", specifier = ">=1.2.0" },
     { name = "hydra-colorlog", specifier = ">=1.2.0" },
