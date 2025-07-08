@@ -1,0 +1,153 @@
+import hydra
+from omegaconf import OmegaConf
+from dataclasses import dataclass
+from typing import List, Optional
+from enum import Enum
+import rich
+import os
+import wandb
+from datetime import datetime
+from .utils.notify import notify
+
+
+class HydraStepType(Enum):
+    train = "train"
+    eval = "eval"
+    bash = "bash"
+    bark = "bark"
+    render = "render"
+    render_case = "render_case"
+
+
+@dataclass
+class HydraStepConfig:
+    type: HydraStepType
+    args: List[str]
+    multirun: Optional[bool] = False
+
+
+@dataclass
+class HydraCommandConfig:
+    commands: List[str]
+
+
+@dataclass
+class WandbConfig:
+    use_wandb: bool
+    project: str
+
+
+@dataclass
+class HydraRunConfig:
+    run_group: str
+    save_group: str
+    commands: List[str]
+    steps: List[HydraStepConfig]
+    wandb: WandbConfig
+
+
+@hydra.main(config_path="../0.run", config_name="default", version_base=None)
+def main(config: HydraRunConfig):
+    rich.print(config)
+
+    # 把latest改成当前时间
+    current_time = datetime.now().strftime("%m%d/%H%M")
+    if config.run_group == "latest":
+        config.run_group = current_time
+    if config.save_group == "latest":
+        config.save_group = current_time
+
+    # 组合命令
+    def _from_step_to_command(step: HydraStepConfig) -> str:
+        rich.print(step)
+        if HydraStepType(step.type) == HydraStepType.train:
+            file_cmd = "uv run python -m sources.skill.code.train"
+            config_cmd = "--config-name='0.train'"
+            multirun_cmd = "--multirun" if step.multirun else ""
+            args_cmd = " ".join(step.args)
+            group_cmd = f"wandb.wandb_group={config.run_group} model.save_group={config.save_group}"
+            wandb_cmd = f"++wandb.wandb_project={config.wandb.project}"
+            return f"{file_cmd} {config_cmd} {multirun_cmd} {args_cmd} {group_cmd} {wandb_cmd}"
+        elif HydraStepType(step.type) == HydraStepType.eval:
+            file_cmd = "uv run src/eval.py"
+            config_cmd = "--config-name=eval"
+            multirun_cmd = "--multirun" if step.multirun else ""
+            args_cmd = " ".join(step.args)
+            group_cmd = f"basic_config.run_group={config.run_group} basic_config.save_group={config.save_group}"
+            wandb_cmd = f"++basic_config.wandb_project={config.wandb.project}"
+            return f"{file_cmd} {config_cmd} {multirun_cmd} {args_cmd} {group_cmd} {wandb_cmd}"
+        elif HydraStepType(step.type) == HydraStepType.render:
+            file_cmd = "uv run src/eval.py"
+            config_cmd = "--config-name=rend"
+            multirun_cmd = "--multirun" if step.multirun else ""
+            args_cmd = " ".join(step.args)
+            group_cmd = f"basic_config.run_group={config.run_group} basic_config.save_group={config.save_group}"
+            wandb_cmd = f"++basic_config.wandb_project={config.wandb.project}"
+            return f"{file_cmd} {config_cmd} {multirun_cmd} {args_cmd} {group_cmd} {wandb_cmd}"
+        elif HydraStepType(step.type) == HydraStepType.render_case:
+            file_cmd = "uv run src/case.py"
+            config_cmd = "--config-name=rend"
+            multirun_cmd = "--multirun" if step.multirun else ""
+            args_cmd = " ".join(step.args)
+            group_cmd = f"basic_config.run_group={config.run_group} basic_config.save_group={config.save_group}"
+            wandb_cmd = f"++basic_config.wandb_project={config.wandb.project}"
+            return f"{file_cmd} {config_cmd} {multirun_cmd} {args_cmd} {group_cmd} {wandb_cmd}"
+        elif HydraStepType(step.type) == HydraStepType.bash:
+            return " ".join(step.args)
+        elif HydraStepType(step.type) == HydraStepType.bark:
+            return f"bark||{step.args[0]}"
+        return ""
+
+    commands = []
+    commands += [_from_step_to_command(step) for step in config.steps]
+    rich.print(commands)
+
+    # 保存命令供复现
+    # try:
+    #     sh_reproduce = "\n".join(commands)
+    #     current_date = datetime.now().strftime("%m-%d")
+    #     current_time = datetime.now().strftime("%H-%M")
+    #     hydra_output_dir = f"src/runs/reproduce/{current_date}/{current_time}"
+    #     os.makedirs(hydra_output_dir, exist_ok=True)
+
+    #     reproduce_sh = f"""#!/bin/sh
+    #     uv run src/runs/reproduce/{current_date}/{current_time}/run.py --config-path="runs/reproduce/{current_date}/{current_time}" --config-name=default
+    #     """
+    #     with open(hydra_output_dir + "/reproduce.sh", "w") as f:
+    #         f.write(reproduce_sh)
+    #     with open(hydra_output_dir + "/default.yaml", "w") as f:
+    #         f.write(OmegaConf.to_yaml(config))
+    #     shutil.copy("src/run.py", hydra_output_dir + "/run.py")
+    #     shutil.copy("src/train.py", hydra_output_dir + "/train.py")
+    #     shutil.copy("src/eval.py", hydra_output_dir + "/eval.py")
+    #     with open(hydra_output_dir + "/pure.sh", "w") as f:
+    #         f.write(sh_reproduce)
+    # except Exception as e:
+    #     rich.print(e)
+
+    # 调用wandb存储代码和配置文件
+    if config.wandb.use_wandb:
+        config_dict = OmegaConf.to_container(config, resolve=True)
+        if type(config_dict) is not dict:
+            raise ValueError("config_dict is not a dict")
+        run_run = wandb.init(
+            project=config.wandb.project,
+            name=f"entrypoint_{config.run_group}",
+            group=config.run_group,
+            job_type="entrypoint",
+            save_code=True,
+            config=config_dict,
+        )
+        run_run.finish()
+
+    # 执行代码
+    for command in commands:
+        rich.print(f"Running command: 【{command}】")
+        if command.startswith("bark||"):
+            notify("训练完成/" + command.split("||")[1])
+        else:
+            os.system(command)
+
+
+if __name__ == "__main__":
+    main()

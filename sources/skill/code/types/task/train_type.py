@@ -28,14 +28,6 @@ class ModelConfig:
 
 
 @dataclass
-class EnvTweakConfig:
-    """环境微调配置"""
-
-    n_walkers: int = 3
-    max_cycles: int = 500
-
-
-@dataclass
 class AlgorithmConfig:
     name: str
 

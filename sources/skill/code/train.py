@@ -5,8 +5,8 @@ import omegaconf
 import rich
 from harl.runners import RUNNER_REGISTRY
 from datetime import datetime
-from ..types.task.train_type import TrainConfig
-from ..types.algorithm.mappo_type import MappoConfig
+from .types.task.train_type import TrainConfig
+from .types.algorithm.mappo_type import MappoConfig
 from typing import Any
 
 
@@ -52,7 +52,7 @@ def _to_harl_dict(
     return algo_dict, env_dict, basic_info
 
 
-@hydra.main(config_path="../../1.config/task", config_name="0.train", version_base=None)
+@hydra.main(config_path="../1.config/task", config_name="0.train", version_base=None)
 def main(cfg: TrainConfig):
     rich.pretty.pprint(_to_dict(cfg), expand_all=True)
 
