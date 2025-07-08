@@ -11,8 +11,6 @@ remove_on_fall: False
 terrain_length: 600
 max_cycles: 500
 
-scenario: default # choose from default, flat_up_flat
-
 custom:
   use_angle_reward: True
   talk: False
