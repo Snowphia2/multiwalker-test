@@ -1,0 +1,25 @@
+n_walkers: 3
+max_cycles: 500
+remove_on_fall: False
+scenario: default # choose from default, flat_up_flat
+terrain_length: 600
+custom:
+  use_angle_reward: True
+  talk: False
+
+  disturbs:
+    # f
+    friction:
+      disturb_enabled: False
+      obs_enabled: False
+
+    # motor
+    motor:
+      disturb_enabled: False
+      obs_enabled: False
+
+    # package_mass
+    package_mass:
+      disturb_enabled: False
+      obs_enabled: False
+  

@@ -1,0 +1,3 @@
+logger:
+  use_wandb: True
+  project: ???

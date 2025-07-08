@@ -1,0 +1,28 @@
+defaults:
+  - algorithm: global/algorithm/mappo
+  - environment: global/environment/multiwalker
+  - _self_
+
+wandb:
+  wandb_name: ???
+  wandb_group: latest
+  wandb_project: mw_skill
+
+model:
+  save_group: latest
+
+env_tweak: 
+  n_walkers: 3
+  max_cycles: 500
+
+hydra:
+  searchpath:
+    - file://sources/skill/1.config/
+  launcher:
+    timeout_min: 6000
+    gpus_per_node: 1
+  run:
+    dir: ./results/outputs/${now:%Y-%m-%d}/${now:%H-%M-%S}
+  sweep:
+    dir: ./results/multirun/${now:%Y-%m-%d}/${now:%H-%M-%S}
+    subdir: ${hydra.job.num}
