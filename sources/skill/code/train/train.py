@@ -1,14 +1,16 @@
 import rich.pretty
 import wandb
 import hydra
-from omegaconf import DictConfig
 import omegaconf
 import rich
 from harl.runners import RUNNER_REGISTRY
 from datetime import datetime
+from ..types.task.train_type import TrainConfig
+from ..types.algorithm.mappo_type import MappoConfig
+from typing import Any
 
 
-def _to_dict(cfg1: DictConfig) -> dict:
+def _to_dict(cfg1) -> dict:
     dict_result = omegaconf.OmegaConf.to_container(
         cfg1, resolve=True, throw_on_missing=True
     )
@@ -17,10 +19,9 @@ def _to_dict(cfg1: DictConfig) -> dict:
     return dict_result
 
 
-def _to_harl_dict(algo_args, env_args, cfg, run_name):
+def _to_harl_dict(algo_args: MappoConfig, env_args: Any, cfg: TrainConfig, run_name):
     algorithm_name = algo_args.name
     env_name = env_args.name
-    scenario_name = env_args.scenario
 
     algo_dict = _to_dict(algo_args)
     del algo_dict["name"]
@@ -28,13 +29,15 @@ def _to_harl_dict(algo_args, env_args, cfg, run_name):
     env_dict = _to_dict(env_args)
     del env_dict["name"]
     del env_dict["scenario"]
-    for key in cfg.env_tweak:
+
+    env_tweak = _to_dict(cfg.env_tweak)
+    for key in env_tweak.keys():
         if not key.startswith("_"):
-            env_dict[key] = cfg.env_tweak[key]
+            env_dict[key] = env_tweak[key]
 
     if (
         env_name == "pettingzoo_mw"
-        and algo_args.train.get("episode_length") is not None
+        and algo_dict["train"].get("episode_length") is not None
     ):
         algo_dict["train"]["episode_length"] = env_dict["max_cycles"]
 
@@ -47,7 +50,7 @@ def _to_harl_dict(algo_args, env_args, cfg, run_name):
 
 
 @hydra.main(config_path="configs", config_name="train", version_base=None)
-def main(cfg: DictConfig):
+def main(cfg: TrainConfig):
     rich.pretty.pprint(cfg, expand_all=True)
 
     # 1. 从配置里读取参数
@@ -60,9 +63,10 @@ def main(cfg: DictConfig):
 
     # 1.1 生成run_name
     run_name = f"[{algorithm_name}]<{scenario_name}>"
-    for key in cfg.env_tweak:
+    env_tweaks = _to_dict(cfg)["env_tweak"]
+    for key in env_tweaks.keys():
         if not key.startswith("_"):
-            run_name += f"<{key}={cfg.env_tweak[key]}>"
+            run_name += f"<{key}={env_tweaks[key]}>"
 
     # 1.2 生成wandb_group
     run_group = cfg.wandb.wandb_group
@@ -86,7 +90,7 @@ def main(cfg: DictConfig):
 
     # 4. 初始化wandb
     wandb.init(
-        project=cfg.wandb_project,
+        project=cfg.wandb.wandb_project,
         config={"original": _to_dict(cfg), "algo": algo_dict, "env": env_dict},
         sync_tensorboard=True,
         # name=run_name + f"_{ts}",
@@ -111,9 +115,7 @@ def main(cfg: DictConfig):
     # 5. 启动训练
     runner.run()
 
-    # 6. 训练完成
     runner.close()
-
     wandb.finish()
 
 

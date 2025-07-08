@@ -74,6 +74,9 @@ class AlgorithmAbstractConfig:
     eval: EvalConfig
     render: RenderConfig
 
+    # added by me
+    name: str
+
     train: Any
     model: Any
     algo: Any

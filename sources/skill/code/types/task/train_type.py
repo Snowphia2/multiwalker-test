@@ -1,5 +1,6 @@
 from dataclasses import dataclass
-from typing import Optional
+from typing import Any, Optional
+from ..algorithm.mappo_type import MappoConfig
 
 
 @dataclass
@@ -40,3 +41,5 @@ class TrainConfig:
     wandb: WandbConfig
     model: ModelConfig
     env_tweak: EnvTweakConfig
+    algorithm: MappoConfig
+    environment: Any
