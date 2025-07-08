@@ -18,7 +18,10 @@
         ".pylintrc": true,
         ".python-version": true,
         "setup.py": true,
-        "uv.lock": true
+        "uv.lock": true,
+        "HARL/examples/": true,
+        "HARL/build/": true,
+        "HARL/assets/": true
     },
     "hidefiles.selectedProfile": "Default"
 }

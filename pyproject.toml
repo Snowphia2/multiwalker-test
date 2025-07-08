@@ -39,4 +39,4 @@ dependencies = [
 harl = { workspace = true }
 
 [tool.uv.workspace]
-members = ["HARL"]
+members = ["packages/HARL"]
