@@ -1,0 +1,70 @@
+from dataclasses import dataclass
+from typing import Optional
+
+
+@dataclass
+class MultiWalkerConfig:
+    """
+    MultiWalker 环境参数配置：
+    n_walkers:           环境中双足行走体（walker）智能体的数量。
+    position_noise:       施加在邻居和包裹位置观测上的噪声。
+    angle_noise:          施加在邻居和包裹角度观测上的噪声。
+    forward_reward:       每步奖励系数，奖励等于 forward_reward * 包裹位置变化。
+    terminate_reward:     当所有walker未能将包裹送到终点时，每个walker获得的奖励。
+    fall_reward:          walker跌倒时获得的惩罚。
+    shared_reward:        是否将奖励在所有智能体间平均分配。
+    terminate_on_fall:    若为True，任一walker跌倒则所有智能体都结束并获得terminate_reward。
+    remove_on_fall:       walker跌倒时是否将其移除（仅在terminate_on_fall为False时有效）。
+    terrain_length:       地形长度（步数）。
+    max_cycles:           最大步数，超过后所有智能体都结束。
+    scenario:             场景类型。
+    custom:               其他自定义参数（dict或None）。
+    """
+
+    n_walkers: int = 3
+    position_noise: float = 1e-3
+    angle_noise: float = 1e-3
+    forward_reward: float = 1.0
+    terminate_reward: float = -100.0
+    fall_reward: float = -10.0
+    shared_reward: bool = True
+    terminate_on_fall: bool = True
+    remove_on_fall: bool = True
+    terrain_length: int = 200
+    max_cycles: int = 500
+    scenario: str = "default"
+    custom: Optional[dict] = None
+
+
+@dataclass
+class MultiWalkerTweakConfig:
+    """
+    MultiWalker 环境参数配置：
+    n_walkers:           环境中双足行走体（walker）智能体的数量。
+    position_noise:       施加在邻居和包裹位置观测上的噪声。
+    angle_noise:          施加在邻居和包裹角度观测上的噪声。
+    forward_reward:       每步奖励系数，奖励等于 forward_reward * 包裹位置变化。
+    terminate_reward:     当所有walker未能将包裹送到终点时，每个walker获得的奖励。
+    fall_reward:          walker跌倒时获得的惩罚。
+    shared_reward:        是否将奖励在所有智能体间平均分配。
+    terminate_on_fall:    若为True，任一walker跌倒则所有智能体都结束并获得terminate_reward。
+    remove_on_fall:       walker跌倒时是否将其移除（仅在terminate_on_fall为False时有效）。
+    terrain_length:       地形长度（步数）。
+    max_cycles:           最大步数，超过后所有智能体都结束。
+    scenario:             场景类型。
+    custom:               其他自定义参数（dict或None）。
+    """
+
+    n_walkers: Optional[int] = None
+    position_noise: Optional[float] = None
+    angle_noise: Optional[float] = None
+    forward_reward: Optional[float] = None
+    terminate_reward: Optional[float] = None
+    fall_reward: Optional[float] = None
+    shared_reward: Optional[bool] = None
+    terminate_on_fall: Optional[bool] = None
+    remove_on_fall: Optional[bool] = None
+    terrain_length: Optional[int] = None
+    max_cycles: Optional[int] = None
+    scenario: Optional[str] = None
+    custom: Optional[dict] = None

@@ -1,6 +1,6 @@
 defaults:
   - algorithm: mappo
-  - environment: multiwalker
+  - environment: pettingzoo_mw
   - algorithm_parameters: ${algorithm}
   - environment_parameters: ${environment}
   - override hydra/launcher: submitit_local

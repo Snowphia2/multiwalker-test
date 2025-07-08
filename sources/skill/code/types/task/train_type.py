@@ -1,6 +1,7 @@
 from dataclasses import dataclass
-from typing import Any, Optional
+from typing import Optional
 from ..algorithm.mappo_type import MappoConfig
+from ..environment.type_multiwalker import MultiWalkerTweakConfig, MultiWalkerConfig
 
 
 @dataclass
@@ -43,7 +44,7 @@ class AlgorithmConfig:
 class EnvironmentConfig:
     name: str
     scenario: str
-    env_tweak: EnvTweakConfig
+    env_tweak: MultiWalkerTweakConfig
 
 
 @dataclass
@@ -64,4 +65,4 @@ class TrainConfig:
     algorithm_parameters: MappoConfig
 
     environment: EnvironmentConfig
-    environment_parameters: Any
+    environment_parameters: MultiWalkerConfig

@@ -1,5 +1,5 @@
 ```
 uv python install 3.8
 uv sync
-uv pip install -e ./HARL
+uv run python -m sources.skill.code.train.train
 ```

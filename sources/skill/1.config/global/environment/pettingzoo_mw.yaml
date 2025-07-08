@@ -1,4 +1,4 @@
-name: multiwalker
+name: pettingzoo_mw
 scenario: raw
 
 env_tweak: 
