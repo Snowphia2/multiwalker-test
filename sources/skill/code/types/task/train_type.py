@@ -35,11 +35,33 @@ class EnvTweakConfig:
 
 
 @dataclass
+class AlgorithmConfig:
+    name: str
+
+
+@dataclass
+class EnvironmentConfig:
+    name: str
+    scenario: str
+    env_tweak: EnvTweakConfig
+
+
+@dataclass
 class TrainConfig:
-    """训练配置主类"""
+    """训练配置主类.
+
+    wandb: wandb配置
+    model: 模型保存配置
+    experiment: 实验配置
+    algorithm_parameters: 算法参数
+    environment_parameters: 环境参数
+    """
 
     wandb: WandbConfig
     model: ModelConfig
-    env_tweak: EnvTweakConfig
-    algorithm: MappoConfig
-    environment: Any
+
+    algorithm: AlgorithmConfig
+    algorithm_parameters: MappoConfig
+
+    environment: EnvironmentConfig
+    environment_parameters: Any

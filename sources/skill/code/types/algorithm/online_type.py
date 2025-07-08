@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Optional, Literal
 
 
@@ -56,7 +56,7 @@ class OnlineModelConfig:
     """
 
     # 网络参数
-    hidden_sizes: "list[int]" = [128, 128]
+    hidden_sizes: "list[int]" = field(default_factory=lambda: [128, 128])
     activation_func: Literal["sigmoid", "tanh", "relu", "leaky_relu", "selu"] = "relu"
     use_feature_normalization: bool = True
     initialization_method: Literal[

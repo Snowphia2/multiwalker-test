@@ -1,23 +1,24 @@
 defaults:
-  - algorithm: global/algorithm/mappo
-  - environment: global/environment/multiwalker
+  - algorithm: mappo
+  - environment: multiwalker
+  - algorithm_parameters: ${algorithm}
+  - environment_parameters: ${environment}
+  - override hydra/launcher: submitit_local
   - _self_
 
 wandb:
-  wandb_name: ???
+  wandb_name: 02s
   wandb_group: latest
   wandb_project: mw_skill
 
 model:
   save_group: latest
 
-env_tweak: 
-  n_walkers: 3
-  max_cycles: 500
+
 
 hydra:
   searchpath:
-    - file://sources/skill/1.config/
+    - file://sources/skill/1.config/global
   launcher:
     timeout_min: 6000
     gpus_per_node: 1

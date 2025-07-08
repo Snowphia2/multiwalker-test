@@ -1,0 +1,7 @@
+name: multiwalker
+scenario: raw
+
+env_tweak: 
+  n_walkers: 3
+  max_cycles: 500
+

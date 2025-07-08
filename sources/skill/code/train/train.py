@@ -19,18 +19,21 @@ def _to_dict(cfg1) -> dict:
     return dict_result
 
 
-def _to_harl_dict(algo_args: MappoConfig, env_args: Any, cfg: TrainConfig, run_name):
-    algorithm_name = algo_args.name
-    env_name = env_args.name
+def _to_harl_dict(
+    env_name: str,
+    algorithm_name: str,
+    algo_args: MappoConfig,
+    env_args: Any,
+    cfg: TrainConfig,
+    run_name: str,
+    save_group: str,
+):
+    algo_args.logger.log_dir = f"./results/models/{save_group}"
 
     algo_dict = _to_dict(algo_args)
-    del algo_dict["name"]
-
     env_dict = _to_dict(env_args)
-    del env_dict["name"]
-    del env_dict["scenario"]
 
-    env_tweak = _to_dict(cfg.env_tweak)
+    env_tweak = _to_dict(cfg.environment.env_tweak)
     for key in env_tweak.keys():
         if not key.startswith("_"):
             env_dict[key] = env_tweak[key]
@@ -49,41 +52,40 @@ def _to_harl_dict(algo_args: MappoConfig, env_args: Any, cfg: TrainConfig, run_n
     return algo_dict, env_dict, basic_info
 
 
-@hydra.main(config_path="configs", config_name="train", version_base=None)
+@hydra.main(config_path="../../1.config/task", config_name="0.train", version_base=None)
 def main(cfg: TrainConfig):
-    rich.pretty.pprint(cfg, expand_all=True)
+    rich.pretty.pprint(_to_dict(cfg), expand_all=True)
 
     # 1. 从配置里读取参数
-    algo_args = cfg.algorithm
-    env_args = cfg.environment
-
     algorithm_name = cfg.algorithm.name
     env_name = cfg.environment.name
     scenario_name = cfg.environment.scenario
 
+    algo_args = cfg.algorithm_parameters
+    env_args = cfg.environment_parameters
+
     # 1.1 生成run_name
     run_name = f"[{algorithm_name}]<{scenario_name}>"
-    env_tweaks = _to_dict(cfg)["env_tweak"]
+    env_tweaks = _to_dict(cfg.environment.env_tweak)
     for key in env_tweaks.keys():
         if not key.startswith("_"):
             run_name += f"<{key}={env_tweaks[key]}>"
 
-    # 1.2 生成wandb_group
-    run_group = cfg.wandb.wandb_group
-
-    # 1.3 生成save_group
-    save_group = cfg.model.save_group
+    # 1.2 生成wandb_group 和 save_group
     now_time = datetime.now().strftime("%m%d/%H%M")
+
+    run_group = cfg.wandb.wandb_group
     if run_group == "latest":
         run_group = now_time
+
+    save_group = cfg.model.save_group
     if save_group == "latest":
         save_group = now_time
 
-    # 1.4 把save_group写入到algo_args.logger.log_dir
-    algo_args.logger.log_dir = f"./results/models/{save_group}"
-
     # 2. 整理参数，转换为dict以传导给harl
-    algo_dict, env_dict, basic_info = _to_harl_dict(algo_args, env_args, cfg, run_name)
+    algo_dict, env_dict, basic_info = _to_harl_dict(
+        env_name, algorithm_name, algo_args, env_args, cfg, run_name, save_group
+    )
 
     # 3. 初始化runner
     runner = RUNNER_REGISTRY[algorithm_name](basic_info, algo_dict, env_dict)
@@ -100,7 +102,6 @@ def main(cfg: TrainConfig):
             env_name,
             algorithm_name,
             scenario_name,
-            f"wker-{cfg.environment.n_walkers}",
         ],
     )
     wandb.define_metric(
