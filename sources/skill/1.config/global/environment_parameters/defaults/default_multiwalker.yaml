@@ -30,4 +30,8 @@ custom:
     package_mass:
       disturb_enabled: False
       obs_enabled: False
-  
+
+    # skill_move_speed
+    skill_move_speed:
+      disturb_enabled: False
+      obs_enabled: False

@@ -135,6 +135,8 @@ from .mw_obs_package_mass_stable import MultiWalkerEnv as _env_package_mass
 from ..disturbances import DisturbanceFactory
 from .mw_talk import MultiWalkerEnv as _env_talk
 from .multiwalker_custom import MultiWalkerEnv as _env_custom
+from .mw_move import MultiWalkerEnv as _env_move
+from .mw_move import MOVE_DOESNT_CARE
 
 
 class raw_env(AECEnv, EzPickle):
@@ -166,6 +168,10 @@ class raw_env(AECEnv, EzPickle):
                     "disturb_enabled": False,
                     "obs_enabled": False,
                 },
+                "skill_move_speed": {
+                    "disturb_enabled": False,
+                    "obs_enabled": False,
+                },
             },
         )
 
@@ -177,15 +183,21 @@ class raw_env(AECEnv, EzPickle):
         ), "目前只支持同时启用一个扰动"
         assert (
             "friction" in self.disturbs
-            and "motor" in self.disturbs
-            and "package_mass" in self.disturbs
-        ), "disturbs must contain 'friction', 'motor', and 'package_mass' keys"
+            or "motor" in self.disturbs
+            or "package_mass" in self.disturbs
+            or "skill_move_speed" in self.disturbs
+        ), (
+            "disturbs must contain 'friction', 'motor', 'package_mass' or 'skill_move_speed' keys"
+        )
 
         self.talk = custom_parameters.get("talk", False)
         self.scenario = custom_parameters.get("scenario", "default")
-
+        print("scenario: ", self.scenario)
         if self.scenario == "custom":
             self.env = _env_custom(*args, **kwargs)
+        elif self.scenario == "mw_move":
+            print("mw_move")
+            self.env = _env_move(*args, **kwargs)
         elif self.talk:
             self.env = _env_talk(*args, **kwargs)
         else:
@@ -373,7 +385,20 @@ class raw_env(AECEnv, EzPickle):
                             self.disturbance["start_at"] = self.env.frames
                             self.disturbance["end_at"] = self.env.frames + 200
                             self.env.package.mass = 1
+                elif self.disturbs["skill_move_speed"]["disturb_enabled"]:
+                    if self.disturbance["is_disturbancing"]:
+                        if self.env.frames >= self.disturbance["end_at"]:
+                            self.disturbance["is_disturbancing"] = False
+                            self.env.set_target_v(MOVE_DOESNT_CARE)
+                    else:
+                        if self.np_random.random() < 0.0015:
+                            self.disturbance["is_disturbancing"] = True
+                            self.disturbance["start_at"] = self.env.frames
+                            self.disturbance["end_at"] = self.env.frames + 400
+                            import random
 
+                            random_speed = random.uniform(0, 0.8)
+                            self.env.set_target_v(random_speed)
         else:
             self._clear_rewards()
         if self._agent_selector.agent_order:

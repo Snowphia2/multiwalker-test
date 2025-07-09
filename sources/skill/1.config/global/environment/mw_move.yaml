@@ -1,0 +1,7 @@
+name: pettingzoo_mw
+scenario: mw_move
+
+env_tweak: 
+  n_walkers: 3
+  max_cycles: 1000
+

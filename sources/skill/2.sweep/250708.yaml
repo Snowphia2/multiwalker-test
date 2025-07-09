@@ -5,14 +5,14 @@ metric:
   goal: maximize
   name: eval_average_episode_rewards.max
 parameters:
-  algorithm.model.lr:
+  algorithm_parameters.model.lr:
     min: 0.0001
     max: 0.01
-  algorithm.algo.ppo_epoch:
+  algorithm_parameters.algo.ppo_epoch:
     values: [1, 3, 5, 10, 15]
-  algorithm.algo.actor_num_mini_batch:
+  algorithm_parameters.algo.actor_num_mini_batch:
     values: [1, 4, 8, 32]
-  algorithm.train.n_rollout_threads:
+  algorithm_parameters.train.n_rollout_threads:
     values: [20] 
 # n_rollout_threads=20 with n_mini_batch=4
 command:
@@ -22,12 +22,16 @@ command:
   - "python"
   - "-m"
   - ${program}
-  - "run_group=250623_sweep_500"
+  - "wandb.wandb_group=250709_sweep"
+  - "++wandb.wandb_project=mw_harl_new"
+  - "model.save_group=latest"
   - "algorithm=mappo"
-  - "env_tweak.max_cycles=500"
-  - "environment=raw"
-  - "algorithm.train.num_env_steps=50000000"
-  - "++env_tweak.terminate_reward=-10.0"
+  - "environment=pettingzoo_mw"
+  - "++environment.env_tweak.max_cycles=1000"
+  - "++environment.env_tweak.terminate_reward=-10.0"
+  - "++environment.scenario=mw_move"
+  - "++environment_parameters.custom.scenario=mw_move"
+  - "algorithm_parameters.train.num_env_steps=50000000"
   - ${args_no_hyphens}
 
 # uv run python -m sources.skill.code.train --config-name=train  algorithm=mappo environment=pettingzoo_mw wandb.wandb_group=250708_test model.save_group=0708/1703 ++wandb.wandb_project=mw_harl_new

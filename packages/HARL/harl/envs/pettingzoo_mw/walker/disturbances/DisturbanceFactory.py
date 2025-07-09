@@ -5,6 +5,7 @@ from harl.envs.pettingzoo_mw.walker.disturbances.package import (
 from harl.envs.pettingzoo_mw.walker.disturbances.walker import (
     DisturbanceWalkerMotorSpeedChange,
 )
+from harl.envs.pettingzoo_mw.walker.disturbances.move import SkillMoveSpeed
 from harl.envs.pettingzoo_mw.walker.disturbances.world import (
     DisturbanceWorldFrictionChange,
 )
@@ -13,6 +14,7 @@ disturbance_dict = {
     "weight_change": DisturbancePackageWeightChange,
     "world_friction_change": DisturbanceWorldFrictionChange,
     "walker_motor_speed_change": DisturbanceWalkerMotorSpeedChange,
+    "skill_move_speed": SkillMoveSpeed,
 }
 
 

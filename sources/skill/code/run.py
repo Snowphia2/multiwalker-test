@@ -24,6 +24,7 @@ class HydraStepConfig:
     type: HydraStepType
     args: List[str]
     multirun: Optional[bool] = False
+    config_name: Optional[str] = None
 
 
 @dataclass
@@ -62,7 +63,11 @@ def main(config: HydraRunConfig):
         rich.print(step)
         if HydraStepType(step.type) == HydraStepType.train:
             file_cmd = "uv run python -m sources.skill.code.train"
-            config_cmd = "--config-name='0.train'"
+            config_cmd = (
+                "--config-name='0.train'"
+                if step.config_name is None
+                else f"--config-name='{step.config_name}'"
+            )
             multirun_cmd = "--multirun" if step.multirun else ""
             args_cmd = " ".join(step.args)
             group_cmd = f"wandb.wandb_group={config.run_group} model.save_group={config.save_group}"
