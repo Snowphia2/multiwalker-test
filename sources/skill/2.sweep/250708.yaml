@@ -15,7 +15,7 @@ parameters:
   algorithm_parameters.train.n_rollout_threads:
     values: [20]
   environment.env_tweak.reward_factor:
-    values: [0.1, 1, 10]
+    values: [0.5, 1.0, 2.0]
 command:
   - ${env}
   - uv

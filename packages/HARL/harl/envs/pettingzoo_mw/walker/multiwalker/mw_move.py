@@ -109,6 +109,28 @@ class MultiWalkerEnv(MultiWalkerEnv_base):
     def scroll_subroutine(self):
         rewards, done, obs = super().scroll_subroutine()
 
+        def _calc_bowl(
+            ref_point: float, cur_point: float, tolerance_region: float
+        ) -> float:
+            """
+            计算指数形碗状函数值
+
+            Args:
+                ref_point: 参考点，函数在此处取极值2
+                cur_point: 当前点，需要计算函数值的位置
+                tolerance_region: 容差区域，定义区间[ref_point-tolerance_region, ref_point+tolerance_region]
+
+            Returns:
+                float: 函数在cur_point处的值
+                - 在ref_point处为2（极值）
+                - 在区间边界处为1
+                - 在区间外呈指数衰减
+            """
+            # 计算当前点到参考点的距离
+            distance = abs(cur_point - ref_point)
+
+            return max(2.0 - (distance / tolerance_region) ** 2, -3)
+
         for i in range(self.n_walkers):
             if self.walkers[i].hull is None:
                 continue
@@ -116,8 +138,8 @@ class MultiWalkerEnv(MultiWalkerEnv_base):
             v_x = (
                 0.3 * self.walkers[i].hull.linearVelocity.x * (VIEWPORT_W / SCALE) / FPS
             )  # actually can be -1 ~ 1
-            reward_v_deviation_penalty = -self.reward_factor * abs(
-                self.target_v - v_x
+            reward_v_deviation_penalty = self.reward_factor * _calc_bowl(
+                self.target_v, v_x, 0.05
             )  # 最大是能差1
             if self.target_v != MOVE_DOESNT_CARE:
                 rewards[i] += reward_v_deviation_penalty

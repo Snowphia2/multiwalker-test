@@ -26,7 +26,7 @@ def main():
     parser.add_argument(
         "--agent_id",
         type=str,
-        default="yuzh2001-iscas/mw_harl_move/1vysaehj",
+        default="yuzh2001-iscas/mw_harl_move/1z6pv68y",
         help="wandb agent ID",
     )
 
