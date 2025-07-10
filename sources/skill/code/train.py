@@ -6,8 +6,7 @@ import rich
 from harl.runners import RUNNER_REGISTRY
 from datetime import datetime
 from .types.task.train_type import TrainConfig
-from .types.algorithm.mappo_type import MappoConfig
-from typing import Any
+import atexit
 
 
 def _to_dict(cfg1) -> dict:
@@ -20,46 +19,12 @@ def _to_dict(cfg1) -> dict:
 
 
 def _to_harl_dict(
-    env_name: str,
-    algorithm_name: str,
-    algo_args: MappoConfig,
-    env_args: Any,
     cfg: TrainConfig,
-    run_name: str,
-    save_group: str,
 ):
-    algo_args.logger.log_dir = f"./results/models/{save_group}"
-
-    algo_dict = _to_dict(algo_args)
-    env_dict = _to_dict(env_args)
-
-    env_tweak = _to_dict(cfg.environment.env_tweak)
-    for key in env_tweak.keys():
-        if not key.startswith("_"):
-            env_dict[key] = env_tweak[key]
-
-    if (
-        env_name == "pettingzoo_mw"
-        and algo_dict["train"].get("episode_length") is not None
-    ):
-        algo_dict["train"]["episode_length"] = env_dict["max_cycles"]
-
-    basic_info = {
-        "env": env_name,
-        "algo": algorithm_name,
-        "exp_name": run_name,
-    }
-    return algo_dict, env_dict, basic_info
-
-
-@hydra.main(config_path="../1.config/task", config_name="0.train", version_base=None)
-def main(cfg: TrainConfig):
-    rich.pretty.pprint(_to_dict(cfg), expand_all=True)
-
     # 1. 从配置里读取参数
     algorithm_name = cfg.algorithm.name
     env_name = cfg.environment.name
-    scenario_name = cfg.environment.scenario
+    scenario_name = cfg.scenario.name
 
     algo_args = cfg.algorithm_parameters
     env_args = cfg.environment_parameters
@@ -82,15 +47,73 @@ def main(cfg: TrainConfig):
     if save_group == "latest":
         save_group = now_time
 
-    # 2. 整理参数，转换为dict以传导给harl
-    algo_dict, env_dict, basic_info = _to_harl_dict(
-        env_name, algorithm_name, algo_args, env_args, cfg, run_name, save_group
+    algo_args.logger.log_dir = f"./results/models/{save_group}"
+
+    # 1.3 转换为dict
+    algo_dict = _to_dict(algo_args)
+    env_dict = _to_dict(env_args)
+
+    # 1.4 执行env_tweak
+    env_tweak = _to_dict(cfg.environment.env_tweak)
+    for key in env_tweak.keys():
+        if not key.startswith("_") and key != "tweak_types":
+            env_dict[key] = env_tweak[key]
+
+    # 1.5 执行scenario
+    if cfg.environment_scenario is not None:
+        env_dict.update(_to_dict(cfg.environment_scenario))
+
+    # 1.6 同步max_cycles
+    if (
+        env_name == "pettingzoo_mw"
+        and algo_dict["train"].get("episode_length") is not None
+    ):
+        algo_dict["train"]["episode_length"] = env_dict["max_cycles"]
+
+    # 1.7 生成basic_info
+    basic_info = {
+        "env": env_name,
+        "algo": algorithm_name,
+        "exp_name": run_name,
+    }
+    return (
+        algo_dict,
+        env_dict,
+        basic_info,
+        algorithm_name,
+        env_name,
+        scenario_name,
+        run_group,
+        save_group,
     )
+
+
+@hydra.main(config_path="../1.config/task", config_name="0.train", version_base=None)
+def main(cfg: TrainConfig):
+    rich.pretty.pprint(_to_dict(cfg), expand_all=True)
+
+    # 2. 整理参数，转换为dict以传导给harl
+    (
+        algo_dict,
+        env_dict,
+        basic_info,
+        algorithm_name,
+        env_name,
+        scenario_name,
+        run_group,
+        save_group,
+    ) = _to_harl_dict(cfg)
 
     # 3. 初始化runner
     runner = RUNNER_REGISTRY[algorithm_name](basic_info, algo_dict, env_dict)
 
+    @atexit.register
+    def _cleanup():
+        runner.close()
+        wandb.finish()
+
     # 4. 初始化wandb
+    wandb.tensorboard.patch(root_logdir=runner.log_dir)
     wandb.init(
         project=cfg.wandb.wandb_project,
         config={"original": _to_dict(cfg), "algo": algo_dict, "env": env_dict},

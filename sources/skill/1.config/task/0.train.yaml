@@ -1,8 +1,11 @@
 defaults:
   - algorithm: mappo
   - environment: pettingzoo_mw
+  - scenario: move
+
   - algorithm_parameters: ${algorithm}
   - environment_parameters: ${environment}
+  - optional environment_scenario: ${environment}/${scenario}
   - override hydra/launcher: submitit_local
   - _self_
 

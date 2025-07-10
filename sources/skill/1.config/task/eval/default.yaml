@@ -6,7 +6,7 @@ defaults:
   - algorithm_parameters: ${algorithm}
   - environment_parameters: ${environment}
   - optional environment_scenario: ${environment}/${scenario}
-  - eval_scenario: eval_scenario/${environment}/${scenario}
+  - eval_scenario: ${environment}/${scenario}
   - override hydra/launcher: submitit_local
   - _self_
 
@@ -16,7 +16,7 @@ wandb:
   wandb_project: mw_skill
 
 model:
-  model_group: latest
+  save_group: latest
   model_path: default
 
 eval_settings:
@@ -31,7 +31,7 @@ eval_settings:
     result_file_name: hi
 
     # 是否渲染
-    render: False
+    render: True
     render_episodes: 5
 
     # 是否进行ablation

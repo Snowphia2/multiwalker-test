@@ -1,5 +1,5 @@
-from dataclasses import dataclass
-from typing import Optional
+from dataclasses import dataclass, field
+from typing import Optional, List
 
 
 @dataclass
@@ -55,6 +55,7 @@ class MultiWalkerTweakConfig:
     custom:               其他自定义参数（dict或None）。
     """
 
+    tweak_types: List[str] = field(default_factory=list)
     n_walkers: Optional[int] = None
     position_noise: Optional[float] = None
     angle_noise: Optional[float] = None

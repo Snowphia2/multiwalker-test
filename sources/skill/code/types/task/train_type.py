@@ -40,6 +40,11 @@ class EnvironmentConfig:
 
 
 @dataclass
+class ScenarioConfig:
+    name: str
+
+
+@dataclass
 class TrainConfig:
     """训练配置主类.
 
@@ -58,3 +63,6 @@ class TrainConfig:
 
     environment: EnvironmentConfig
     environment_parameters: MultiWalkerConfig
+
+    scenario: ScenarioConfig
+    environment_scenario: Optional[dict]

@@ -61,6 +61,10 @@ def main(config: HydraRunConfig):
     # 组合命令
     def _from_step_to_command(step: HydraStepConfig) -> str:
         rich.print(step)
+        group_cmd = (
+            f"wandb.wandb_group={config.run_group} model.save_group={config.save_group}"
+        )
+        wandb_cmd = f"++wandb.wandb_project={config.wandb.project}"
         if HydraStepType(step.type) == HydraStepType.train:
             file_cmd = "uv run python -m sources.skill.code.train"
             config_cmd = (
@@ -70,32 +74,25 @@ def main(config: HydraRunConfig):
             )
             multirun_cmd = "--multirun" if step.multirun else ""
             args_cmd = " ".join(step.args)
-            group_cmd = f"wandb.wandb_group={config.run_group} model.save_group={config.save_group}"
-            wandb_cmd = f"++wandb.wandb_project={config.wandb.project}"
             return f"{file_cmd} {config_cmd} {multirun_cmd} {args_cmd} {group_cmd} {wandb_cmd}"
         elif HydraStepType(step.type) == HydraStepType.eval:
-            file_cmd = "uv run src/eval.py"
-            config_cmd = "--config-name=eval"
+            file_cmd = "uv run python -m sources.skill.code.eval "
             multirun_cmd = "--multirun" if step.multirun else ""
             args_cmd = " ".join(step.args)
-            group_cmd = f"basic_config.run_group={config.run_group} basic_config.save_group={config.save_group}"
-            wandb_cmd = f"++basic_config.wandb_project={config.wandb.project}"
-            return f"{file_cmd} {config_cmd} {multirun_cmd} {args_cmd} {group_cmd} {wandb_cmd}"
+
+            return f"{file_cmd} {multirun_cmd} {args_cmd} {group_cmd} {wandb_cmd}"
         elif HydraStepType(step.type) == HydraStepType.render:
-            file_cmd = "uv run src/eval.py"
-            config_cmd = "--config-name=rend"
+            file_cmd = "uv run python -m sources.skill.code.eval"
+            config_cmd = "++eval_settings.functions.render=True"
             multirun_cmd = "--multirun" if step.multirun else ""
             args_cmd = " ".join(step.args)
-            group_cmd = f"basic_config.run_group={config.run_group} basic_config.save_group={config.save_group}"
-            wandb_cmd = f"++basic_config.wandb_project={config.wandb.project}"
+
             return f"{file_cmd} {config_cmd} {multirun_cmd} {args_cmd} {group_cmd} {wandb_cmd}"
         elif HydraStepType(step.type) == HydraStepType.render_case:
             file_cmd = "uv run src/case.py"
             config_cmd = "--config-name=rend"
             multirun_cmd = "--multirun" if step.multirun else ""
             args_cmd = " ".join(step.args)
-            group_cmd = f"basic_config.run_group={config.run_group} basic_config.save_group={config.save_group}"
-            wandb_cmd = f"++basic_config.wandb_project={config.wandb.project}"
             return f"{file_cmd} {config_cmd} {multirun_cmd} {args_cmd} {group_cmd} {wandb_cmd}"
         elif HydraStepType(step.type) == HydraStepType.bash:
             return " ".join(step.args)

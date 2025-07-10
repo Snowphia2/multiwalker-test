@@ -1,6 +1,6 @@
 program: sources.skill.code.train
 method: bayes
-project: mw_harl_new
+project: mw_harl_new_1
 metric:
   goal: maximize
   name: eval_average_episode_rewards.max
@@ -21,11 +21,11 @@ command:
   - "python"
   - "-m"
   - ${program}
-  - "wandb.wandb_group=250709_sweep2"
-  - "++wandb.wandb_project=mw_harl_sweep2"
+  - "wandb.wandb_group=250709_sweep2_1"
+  - "++wandb.wandb_project=mw_harl_sweep2_1"
   - "model.save_group=latest"
   - "algorithm=mappo"
-  - "environment=pettingzoo_mw"
+  - "environment=mw_move"
   - "++environment.env_tweak.max_cycles=1000"
   - "++environment.env_tweak.terminate_reward=-10.0"
   - "++environment.scenario=mw_move"
