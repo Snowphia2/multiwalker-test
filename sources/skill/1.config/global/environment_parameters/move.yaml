@@ -3,7 +3,7 @@ defaults:
   - _self_
 
 custom:
-  scenario: mw_move
+  scenario: move
 
   disturbs:
     skill_move_speed:

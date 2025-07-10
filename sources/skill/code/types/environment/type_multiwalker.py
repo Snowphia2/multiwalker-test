@@ -69,3 +69,4 @@ class MultiWalkerTweakConfig:
     max_cycles: Optional[int] = None
     scenario: Optional[str] = None
     custom: Optional[dict] = None
+    reward_factor: Optional[float] = None

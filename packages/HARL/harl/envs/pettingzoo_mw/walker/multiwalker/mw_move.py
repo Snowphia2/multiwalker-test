@@ -48,6 +48,11 @@ class BipedalWalker(BipedalWalker_base):
 
 
 class MultiWalkerEnv(MultiWalkerEnv_base):
+    def __init__(self, *args, **kwargs):
+        self.reward_factor = kwargs.get("reward_factor", 1.0)
+        del kwargs["reward_factor"]
+        super().__init__(*args, **kwargs)
+
     def setup(self):
         super().setup()
 
@@ -111,13 +116,17 @@ class MultiWalkerEnv(MultiWalkerEnv_base):
             v_x = (
                 0.3 * self.walkers[i].hull.linearVelocity.x * (VIEWPORT_W / SCALE) / FPS
             )  # actually can be -1 ~ 1
-            reward_v_deviation_penalty = -1 * abs(self.target_v - v_x)  # 最大是能差1
+            reward_v_deviation_penalty = -self.reward_factor * abs(
+                self.target_v - v_x
+            )  # 最大是能差1
             if self.target_v != MOVE_DOESNT_CARE:
                 rewards[i] += reward_v_deviation_penalty
 
             # h_deviation_penalty
             pos = self.walkers[i].hull.position[1]
-            reward_h_deviation_penalty = -10 * abs(self.target_h - pos)  # 最大是能差1
+            reward_h_deviation_penalty = -self.reward_factor * abs(
+                self.target_h - pos
+            )  # 最大是能差1
             if self.target_h != MOVE_DOESNT_CARE:
                 rewards[i] += reward_h_deviation_penalty
 

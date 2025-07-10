@@ -3,7 +3,7 @@ defaults:
   - _self_
 
 run_group: 250708_test
-save_group: 0710/0322
+save_group: handpicked/move_base # 0710/0322
 steps:
   - type: eval
     multirun: False
@@ -11,6 +11,7 @@ steps:
       - ++environment.env_tweak.tweak_types=[max_cycles,terminate_reward]
       - ++environment.env_tweak.terminate_reward=-10.0
       - ++environment.env_tweak.max_cycles=1000
+      - ++environment.env_tweak.reward_factor=0.1
   - type: bark
     args:
       - train_finish
