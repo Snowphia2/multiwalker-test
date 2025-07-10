@@ -3,7 +3,7 @@ desc: 变速场景
 
 disturbances:
   - name: skill_move_speed
-    start_at: 300
+    start_at: 100
     end_at: 301
     disturbance_args:
       speed: 0.2

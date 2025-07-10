@@ -111,7 +111,7 @@ class MultiWalkerEnv(MultiWalkerEnv_base):
             v_x = (
                 0.3 * self.walkers[i].hull.linearVelocity.x * (VIEWPORT_W / SCALE) / FPS
             )  # actually can be -1 ~ 1
-            reward_v_deviation_penalty = -10 * abs(self.target_v - v_x)  # 最大是能差1
+            reward_v_deviation_penalty = -1 * abs(self.target_v - v_x)  # 最大是能差1
             if self.target_v != MOVE_DOESNT_CARE:
                 rewards[i] += reward_v_deviation_penalty
 
