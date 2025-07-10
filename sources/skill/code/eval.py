@@ -107,7 +107,7 @@ def eval(
     rich.print(f"Loading model from {model_path}")
 
     name_suffix = ""
-    for key in ["n_walkers", *config.environment.env_tweak.tweak_types]:
+    for key in ["n_walkers", *sorted(config.environment.env_tweak.tweak_types)]:
         if not key.startswith("_"):
             name_suffix += f"<{key}={config.environment.env_tweak[key]}>"
     model_path += name_suffix

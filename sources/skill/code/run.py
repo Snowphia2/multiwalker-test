@@ -137,7 +137,7 @@ def main(config: HydraRunConfig):
             name=f"entrypoint_{config.run_group}",
             group=config.run_group,
             job_type="entrypoint",
-            save_code=True,
+            # save_code=True,
             config=config_dict,
         )
         run_run.finish()
