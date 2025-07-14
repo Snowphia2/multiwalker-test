@@ -135,6 +135,10 @@ def main(cfg: TrainConfig):
         "eval_average_episode_rewards",
         summary="max",
     )
+    wandb.define_metric(
+        "eval_average_steps",
+        summary="max",
+    )
 
     # 5. 启动训练
     runner.run()

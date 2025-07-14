@@ -1,21 +1,21 @@
 program: sources.skill.code.train
 method: bayes
-project: mw_harl_move
+project: mw_harl_move_1
 metric:
   goal: maximize
   name: eval_average_episode_rewards.max
 parameters:
   algorithm_parameters.model.lr:
-    min: 0.0001
-    max: 0.01
+    values: [0.0001, 0.001, 0.01]
   algorithm_parameters.algo.ppo_epoch:
-    values: [1, 2, 4, 8, 16]
+    values: [5,10,15]
   algorithm_parameters.algo.actor_num_mini_batch:
-    values: [1, 2, 4, 8, 16]
+    values: [1,2,3]
   algorithm_parameters.train.n_rollout_threads:
     values: [20]
   environment.env_tweak.reward_factor:
-    values: [0.5, 1.0, 2.0]
+    min: 0.1
+    max: 2.0
 command:
   - ${env}
   - uv

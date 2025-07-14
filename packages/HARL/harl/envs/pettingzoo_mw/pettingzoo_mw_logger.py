@@ -1,4 +1,5 @@
 from harl.common.base_logger import BaseLogger
+import numpy as np
 
 
 class PettingZooMWLogger(BaseLogger):
@@ -8,6 +9,17 @@ class PettingZooMWLogger(BaseLogger):
         )
         self.episode = 1
         self.is_testing = False
+        self.test_data = {
+            "terminate_at": [],
+            "angle_data": [
+                [] for _ in range(self.algo_args["eval"]["n_eval_rollout_threads"])
+            ],
+            "package_x": [],
+        }
+
+    def init(self, episodes):
+        """Initialize the logger."""
+        super().init(episodes)
         self.test_data = {
             "terminate_at": [],
             "angle_data": [
@@ -46,3 +58,22 @@ class PettingZooMWLogger(BaseLogger):
             for eval_i in range(self.algo_args["eval"]["n_eval_rollout_threads"]):
                 self.one_episode_rewards[eval_i].append(eval_rewards[eval_i])
             self.eval_infos = eval_infos
+
+    def eval_log(self, eval_episode):
+        """Log evaluation information."""
+        self.eval_episode_rewards = np.concatenate(
+            [rewards for rewards in self.eval_episode_rewards if rewards]
+        )
+        eval_env_infos = {
+            "eval_average_episode_rewards": self.eval_episode_rewards,
+            "eval_max_episode_rewards": [np.max(self.eval_episode_rewards)],
+            "eval_average_steps": [np.mean(self.test_data["terminate_at"])],
+        }
+        self.log_env(eval_env_infos)
+        eval_avg_rew = np.mean(self.eval_episode_rewards)
+        print("Evaluation average episode reward is {}.\n".format(eval_avg_rew))
+        # print(self.eval_episode_rewards)
+        self.log_file.write(
+            ",".join(map(str, [self.total_num_steps, eval_avg_rew])) + "\n"
+        )
+        self.log_file.flush()

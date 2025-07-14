@@ -28,9 +28,15 @@ class BipedalWalker(BipedalWalker_base):
     def get_observation(self):
         original_obs = super().get_observation()
 
-        new_state = (
-            original_obs[:14] + [self.target_v, self.target_h] + original_obs[14:]
+        pos = self.hull.position
+        vel = self.hull.linearVelocity
+        t_v = (
+            self.target_v
+            if self.target_v != MOVE_DOESNT_CARE
+            else 0.3 * vel.x * (VIEWPORT_W / SCALE) / FPS
         )
+        t_h = self.target_h if self.target_h != MOVE_DOESNT_CARE else pos[1]
+        new_state = original_obs[:14] + [t_v, t_h] + original_obs[14:]
 
         return new_state
 
@@ -141,15 +147,13 @@ class MultiWalkerEnv(MultiWalkerEnv_base):
             reward_v_deviation_penalty = self.reward_factor * _calc_bowl(
                 self.target_v, v_x, 0.05
             )  # 最大是能差1
-            if self.target_v != MOVE_DOESNT_CARE:
-                rewards[i] += reward_v_deviation_penalty
+            rewards[i] += reward_v_deviation_penalty
 
             # h_deviation_penalty
-            pos = self.walkers[i].hull.position[1]
-            reward_h_deviation_penalty = -self.reward_factor * abs(
-                self.target_h - pos
-            )  # 最大是能差1
-            if self.target_h != MOVE_DOESNT_CARE:
-                rewards[i] += reward_h_deviation_penalty
+            # pos = self.walkers[i].hull.position[1]
+            # reward_h_deviation_penalty = -self.reward_factor * abs(
+            #     self.target_h - pos
+            # )  # 最大是能差1
+            # rewards[i] += reward_h_deviation_penalty
 
         return rewards, done, obs
