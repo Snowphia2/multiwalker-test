@@ -132,6 +132,14 @@ def main(cfg: TrainConfig):
         summary="max",
     )
     wandb.define_metric(
+        "logs/eval_average_steps/eval_average_steps/eval_average_steps",
+        summary="max",
+    )
+    wandb.define_metric(
+        "eval_average_steps/eval_average_steps/eval_average_steps",
+        summary="max",
+    )
+    wandb.define_metric(
         "eval_average_episode_rewards",
         summary="max",
     )

@@ -10,12 +10,11 @@ parameters:
   algorithm_parameters.algo.ppo_epoch:
     values: [5,10,15]
   algorithm_parameters.algo.actor_num_mini_batch:
-    values: [1,2,3]
+    values: [1,2,4]
   algorithm_parameters.train.n_rollout_threads:
     values: [20]
   environment.env_tweak.reward_factor:
-    min: 0.1
-    max: 2.0
+    values: [0.5, 1.0, 1.5, 2.0]
 command:
   - ${env}
   - uv
@@ -32,7 +31,7 @@ command:
   - "++environment.env_tweak.terminate_reward=-10.0"
   - "++environment.scenario=move"
   - "algorithm_parameters.train.num_env_steps=30000000"
-  - "++algorithm_parameters.train.model_dir='/root/proj/2507-multiwalker-harl/results/models/handpicked/move_base/pettingzoo_mw/multiwalker/mappo/[mappo]<mw_move><n_walkers=3><max_cycles=1000><terminate_reward=-10.0>/seed-slkjflkadsjdflkajld;k/models'"
+  # - "++algorithm_parameters.train.model_dir='/root/proj/2507-multiwalker-harl/results/models/handpicked/move_base/pettingzoo_mw/multiwalker/mappo/[mappo]<mw_move><n_walkers=3><max_cycles=1000><terminate_reward=-10.0>/seed-slkjflkadsjdflkajld;k/models'"
   - ${args_no_hyphens}
 
 # uv run python -m sources.skill.code.train --config-name=train  algorithm=mappo environment=pettingzoo_mw wandb.wandb_group=250708_test model.save_group=0708/1703 ++wandb.wandb_project=mw_harl_new

@@ -14,7 +14,7 @@ from .multiwalker_custom import (
     FPS,
 )
 
-MOVE_DOESNT_CARE = -1
+MOVE_DOESNT_CARE = 10
 
 
 class BipedalWalker(BipedalWalker_base):
@@ -135,7 +135,7 @@ class MultiWalkerEnv(MultiWalkerEnv_base):
             # 计算当前点到参考点的距离
             distance = abs(cur_point - ref_point)
 
-            return max(2.0 - (distance / tolerance_region) ** 2, -3)
+            return max(1.0 - (distance / tolerance_region) ** 2, -3)
 
         for i in range(self.n_walkers):
             if self.walkers[i].hull is None:
@@ -147,6 +147,8 @@ class MultiWalkerEnv(MultiWalkerEnv_base):
             reward_v_deviation_penalty = self.reward_factor * _calc_bowl(
                 self.target_v, v_x, 0.05
             )  # 最大是能差1
+            if self.target_v == MOVE_DOESNT_CARE:
+                reward_v_deviation_penalty = 0  # self.reward_factor
             rewards[i] += reward_v_deviation_penalty
 
             # h_deviation_penalty
