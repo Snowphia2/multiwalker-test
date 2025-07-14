@@ -70,3 +70,4 @@ class MultiWalkerTweakConfig:
     scenario: Optional[str] = None
     custom: Optional[dict] = None
     reward_factor: Optional[float] = None
+    move_idle_reward: Optional[float] = None

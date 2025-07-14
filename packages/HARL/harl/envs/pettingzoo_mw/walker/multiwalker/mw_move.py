@@ -56,7 +56,9 @@ class BipedalWalker(BipedalWalker_base):
 class MultiWalkerEnv(MultiWalkerEnv_base):
     def __init__(self, *args, **kwargs):
         self.reward_factor = kwargs.get("reward_factor", 1.0)
+        self.move_idle_reward = kwargs.get("move_idle_reward", 0.0)
         del kwargs["reward_factor"]
+        del kwargs["move_idle_reward"]
         super().__init__(*args, **kwargs)
 
     def setup(self):
@@ -148,7 +150,7 @@ class MultiWalkerEnv(MultiWalkerEnv_base):
                 self.target_v, v_x, 0.05
             )  # 最大是能差1
             if self.target_v == MOVE_DOESNT_CARE:
-                reward_v_deviation_penalty = 0  # self.reward_factor
+                reward_v_deviation_penalty = self.move_idle_reward  # self.reward_factor
             rewards[i] += reward_v_deviation_penalty
 
             # h_deviation_penalty

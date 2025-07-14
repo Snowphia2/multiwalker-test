@@ -1,6 +1,6 @@
 program: sources.skill.code.train
 method: bayes
-project: mw_harl_move_1
+project: mw_harl_move_2
 metric:
   goal: maximize
   name: eval_average_episode_rewards.max
@@ -15,6 +15,8 @@ parameters:
     values: [20]
   environment.env_tweak.reward_factor:
     values: [0.5, 1.0, 1.5, 2.0]
+  environment.env_tweak.move_idle_reward:
+    values: [0.0, 0.5]
 command:
   - ${env}
   - uv
