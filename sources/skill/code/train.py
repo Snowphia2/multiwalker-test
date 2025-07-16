@@ -147,6 +147,14 @@ def main(cfg: TrainConfig):
         "eval_average_steps",
         summary="max",
     )
+    wandb.define_metric(
+        "eval_terminate_x",
+        summary="last",
+    )
+    wandb.define_metric(
+        "eval_terminate_x",
+        summary="max",
+    )
 
     # 5. 启动训练
     runner.run()

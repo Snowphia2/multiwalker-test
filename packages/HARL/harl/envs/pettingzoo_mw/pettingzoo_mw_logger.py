@@ -68,6 +68,7 @@ class PettingZooMWLogger(BaseLogger):
             "eval_average_episode_rewards": self.eval_episode_rewards,
             "eval_max_episode_rewards": [np.max(self.eval_episode_rewards)],
             "eval_average_steps": [np.mean(self.test_data["terminate_at"])],
+            "eval_terminate_x": [np.mean(self.test_data["package_x"])],
         }
         self.log_env(eval_env_infos)
         eval_avg_rew = np.mean(self.eval_episode_rewards)

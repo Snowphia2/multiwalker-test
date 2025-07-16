@@ -1,3 +1,4 @@
+from math import exp
 import numpy as np
 from gymnasium import spaces
 
@@ -14,7 +15,7 @@ from .multiwalker_custom import (
     FPS,
 )
 
-MOVE_DOESNT_CARE = 10
+MOVE_DOESNT_CARE = 0.8
 
 
 class BipedalWalker(BipedalWalker_base):
@@ -30,12 +31,8 @@ class BipedalWalker(BipedalWalker_base):
 
         pos = self.hull.position
         vel = self.hull.linearVelocity
-        t_v = (
-            self.target_v
-            if self.target_v != MOVE_DOESNT_CARE
-            else 0.3 * vel.x * (VIEWPORT_W / SCALE) / FPS
-        )
-        t_h = self.target_h if self.target_h != MOVE_DOESNT_CARE else pos[1]
+        t_v = self.target_v
+        t_h = self.target_h  # if self.target_h != MOVE_DOESNT_CARE else pos[1]
         new_state = original_obs[:14] + [t_v, t_h] + original_obs[14:]
 
         return new_state
@@ -56,9 +53,7 @@ class BipedalWalker(BipedalWalker_base):
 class MultiWalkerEnv(MultiWalkerEnv_base):
     def __init__(self, *args, **kwargs):
         self.reward_factor = kwargs.get("reward_factor", 1.0)
-        self.move_idle_reward = kwargs.get("move_idle_reward", 0.0)
         del kwargs["reward_factor"]
-        del kwargs["move_idle_reward"]
         super().__init__(*args, **kwargs)
 
     def setup(self):
@@ -117,27 +112,8 @@ class MultiWalkerEnv(MultiWalkerEnv_base):
     def scroll_subroutine(self):
         rewards, done, obs = super().scroll_subroutine()
 
-        def _calc_bowl(
-            ref_point: float, cur_point: float, tolerance_region: float
-        ) -> float:
-            """
-            计算指数形碗状函数值
-
-            Args:
-                ref_point: 参考点，函数在此处取极值2
-                cur_point: 当前点，需要计算函数值的位置
-                tolerance_region: 容差区域，定义区间[ref_point-tolerance_region, ref_point+tolerance_region]
-
-            Returns:
-                float: 函数在cur_point处的值
-                - 在ref_point处为2（极值）
-                - 在区间边界处为1
-                - 在区间外呈指数衰减
-            """
-            # 计算当前点到参考点的距离
-            distance = abs(cur_point - ref_point)
-
-            return max(1.0 - (distance / tolerance_region) ** 2, -3)
+        def _calc_bowl(ref_point: float, cur_point: float) -> float:
+            return exp(-((ref_point / cur_point) ** 2))
 
         for i in range(self.n_walkers):
             if self.walkers[i].hull is None:
@@ -145,12 +121,10 @@ class MultiWalkerEnv(MultiWalkerEnv_base):
             # v_deviation_penalty
             v_x = (
                 0.3 * self.walkers[i].hull.linearVelocity.x * (VIEWPORT_W / SCALE) / FPS
-            )  # actually can be -1 ~ 1
+            )
             reward_v_deviation_penalty = self.reward_factor * _calc_bowl(
-                self.target_v, v_x, 0.05
-            )  # 最大是能差1
-            if self.target_v == MOVE_DOESNT_CARE:
-                reward_v_deviation_penalty = self.move_idle_reward  # self.reward_factor
+                self.target_v, v_x
+            )
             rewards[i] += reward_v_deviation_penalty
 
             # h_deviation_penalty

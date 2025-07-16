@@ -186,6 +186,7 @@ class BaseLogger:
                     env_infos["eval_average_episode_rewards"]
                 ),
                 "eval_average_steps": np.mean(env_infos["eval_average_steps"]),
+                "eval_terminate_x": np.mean(env_infos["eval_terminate_x"]),
             }
         )
 
