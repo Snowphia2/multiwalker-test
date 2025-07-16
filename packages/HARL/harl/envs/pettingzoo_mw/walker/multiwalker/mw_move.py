@@ -113,7 +113,8 @@ class MultiWalkerEnv(MultiWalkerEnv_base):
         rewards, done, obs = super().scroll_subroutine()
 
         def _calc_bowl(ref_point: float, cur_point: float) -> float:
-            return exp(-((ref_point / cur_point) ** 2))
+            sigma = 0.093  # 让差0.2时reward约为0.1
+            return exp(-((ref_point - cur_point) ** 2) / (2 * sigma**2))
 
         for i in range(self.n_walkers):
             if self.walkers[i].hull is None:
