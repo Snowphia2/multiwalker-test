@@ -391,7 +391,7 @@ class raw_env(AECEnv, EzPickle):
                             self.disturbance["is_disturbancing"] = False
                             self.env.set_target_v(MOVE_DOESNT_CARE)
                     else:
-                        if self.np_random.random() < 0.0015:
+                        if self.np_random.random() < 0.0005:
                             self.disturbance["is_disturbancing"] = True
                             self.disturbance["start_at"] = self.env.frames
                             self.disturbance["end_at"] = self.env.frames + 400
