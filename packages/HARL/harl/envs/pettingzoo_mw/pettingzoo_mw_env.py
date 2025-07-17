@@ -62,6 +62,14 @@ class PettingZooMWEnv:
                 * (VIEWPORT_W / SCALE)
                 / FPS
             )
+            # print("--------------------------------")
+            # print(f"v_deviation: {info[agent]['v_deviation']}")
+            # print(f"v_x: {self.raw_env.env.walkers[0].hull.linearVelocity.x}")
+            # print(
+            #     f"v_x_scaled: {0.3 * self.raw_env.env.walkers[0].hull.linearVelocity.x * (VIEWPORT_W / SCALE) / FPS}"
+            # )
+            # print(f"target_v: {self.raw_env.env.target_v}")
+            # print("--------------------------------")
         if self.cur_step == self.max_cycles:
             trunc = {agent: True for agent in self.agents}
             for agent in self.agents:
