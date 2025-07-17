@@ -95,15 +95,21 @@ class MultiWalkerEnv(MultiWalkerEnv_base):
         self.set_target(MOVE_DOESNT_CARE, MOVE_DOESNT_CARE)
         return self.observe(0)
 
+    def set_t_v_agent(self, agent_idx: int, target_v: float):
+        self.walkers[agent_idx].target_v = target_v
+
+    def set_t_h_agent(self, agent_idx: int, target_h: float):
+        self.walkers[agent_idx].target_h = target_h
+
     def set_target_v(self, target_v):
         self.target_v = target_v
-        for walker in self.walkers:
-            walker.target_v = target_v
+        for i in range(self.n_walkers):
+            self.set_t_v_agent(i, target_v)
 
     def set_target_h(self, target_h):
         self.target_h = target_h
-        for walker in self.walkers:
-            walker.target_h = target_h
+        for i in range(self.n_walkers):
+            self.set_t_h_agent(i, target_h)
 
     def set_target(self, target_v, target_h):
         self.set_target_v(target_v)

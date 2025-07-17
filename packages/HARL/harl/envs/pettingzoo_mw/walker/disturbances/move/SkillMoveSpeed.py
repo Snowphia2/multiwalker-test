@@ -11,10 +11,20 @@ class SkillMoveSpeed(SkillMoveBase):
 
     def start(self):
         super().start()
-        self.env.set_target_v(self.disturbance_args["speed"])
+        if self.disturbance_args.get("on_agent_idx") is not None:
+            self.env.set_t_v_agent(
+                self.disturbance_args["on_agent_idx"], self.disturbance_args["speed"]
+            )
+        else:
+            self.env.set_target_v(self.disturbance_args["speed"])
         print(f"SkillMoveSpeed: {self.disturbance_args['speed']}")
 
     def end(self):
-        self.env.set_target_v(MOVE_DOESNT_CARE)
+        if self.disturbance_args.get("on_agent_idx") is not None:
+            self.env.set_t_v_agent(
+                self.disturbance_args["on_agent_idx"], MOVE_DOESNT_CARE
+            )
+        else:
+            self.env.set_target_v(MOVE_DOESNT_CARE)
         super().end()
         print(f"SkillMoveSpeed: {MOVE_DOESNT_CARE}")
