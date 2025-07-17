@@ -6,14 +6,14 @@ disturbances:
     start_at: 100
     end_at: 300
     disturbance_args:
-      speed: 0.8
+      speed: 0.4
   - name: skill_move_speed
     start_at: 400
-    end_at: 700
+    end_at: 750
     disturbance_args:
       speed: 0.1
   - name: skill_move_speed
     start_at: 800
     end_at: 1000
     disturbance_args:
-      speed: 0.8
+      speed: 0.6
