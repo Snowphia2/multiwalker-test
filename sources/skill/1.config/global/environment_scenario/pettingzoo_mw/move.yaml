@@ -2,6 +2,8 @@ defaults:
   - pettingzoo_mw/raw@_here_
   - _self_
 
+terrain_config: [{'type': 'flat', 'length': 20}, {'type': 'up', 'length': 5, 'angle': 10}, {'type': 'flat', 'length': 200}]
+
 custom:
   scenario: move
 

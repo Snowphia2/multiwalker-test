@@ -32,7 +32,7 @@ eval_settings:
 
     # 是否渲染
     render: True
-    render_episodes: 5
+    render_episodes: 1
 
     # 是否进行ablation
     ablation: False
@@ -41,7 +41,7 @@ eval_settings:
     use_gpu: False
 
     # 是否导出角度数据
-    export_angle_data: False
+    export_angle_data: True
 
 
 

@@ -5,5 +5,5 @@ env_tweak:
   n_walkers: 3
   reward_factor: 10.0
   max_cycles: 1000
-  move_idle_reward: 0.0
+  # move_idle_reward: 0.0
 

@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Optional
+from typing import Any, List, Optional
 from ..algorithm.mappo_type import MappoConfig
 from ..environment.type_multiwalker import MultiWalkerTweakConfig, MultiWalkerConfig
 
@@ -45,6 +45,22 @@ class ScenarioConfig:
 
 
 @dataclass
+class DisturbanceConfig:
+    name: str
+    start_at: int
+    end_at: int
+    disturbance_args: Any
+
+
+@dataclass
+class EvalScenarioConfig:
+    name: str
+    desc: str
+    is_raw: Optional[bool] = False
+    disturbances: Optional[List[DisturbanceConfig]] = None
+
+
+@dataclass
 class TrainConfig:
     """训练配置主类.
 
@@ -66,3 +82,5 @@ class TrainConfig:
 
     scenario: ScenarioConfig
     environment_scenario: Optional[dict]
+
+    eval_scenario: EvalScenarioConfig

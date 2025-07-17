@@ -33,6 +33,14 @@ def _to_harl_dict(
         run_group,
         save_group,
     ) = _train_to_harl_dict(cfg)
+
+    if cfg.eval_scenario.env_tweak is not None:
+        eval_env_tweak = _to_dict(cfg.eval_scenario.env_tweak)
+        for key in eval_env_tweak.keys():
+            if not key.startswith("_") and key != "tweak_types":
+                env_dict[key] = eval_env_tweak[key]
+                print(f"eval_env_tweak: {key} = {eval_env_tweak[key]}")
+
     return (
         algo_dict,
         env_dict,

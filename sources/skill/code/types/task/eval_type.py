@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from ..environment.type_multiwalker import MultiWalkerTweakConfig
 from .train_type import TrainConfig
 from typing import Any, Optional, List
 
@@ -48,6 +49,7 @@ class EvalScenarioConfig:
     name: str
     desc: str
     is_raw: Optional[bool] = False
+    env_tweak: Optional[MultiWalkerTweakConfig] = None
     disturbances: Optional[List[DisturbanceConfig]] = None
 
 

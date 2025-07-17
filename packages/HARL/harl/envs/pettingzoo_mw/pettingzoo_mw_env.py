@@ -2,6 +2,12 @@ import copy
 import logging
 import supersuit as ss
 
+from .walker.multiwalker.mw_move import (
+    VIEWPORT_W,
+    FPS,
+    SCALE,
+)
+
 # from pettingzoo.sisl import multiwalker_v9
 from .walker.multiwalker.multiwalker import env_with_raw
 from pettingzoo.utils.conversions import aec_to_parallel_wrapper
@@ -49,6 +55,21 @@ class PettingZooMWEnv:
             info[agent]["package_angle"] = self.raw_env.env.package.angle / 3.14 * 180
             info[agent]["curr_step"] = self.cur_step
             info[agent]["package_x"] = self.raw_env.env.package.position.x
+            info[agent]["v_deviation"] = abs(
+                self.raw_env.env.target_v
+                - 0.3
+                * self.raw_env.env.walkers[0].hull.linearVelocity.x
+                * (VIEWPORT_W / SCALE)
+                / FPS
+            )
+            # print("--------------------------------")
+            # print(f"v_deviation: {info[agent]['v_deviation']}")
+            # print(f"v_x: {self.raw_env.env.walkers[0].hull.linearVelocity.x}")
+            # print(
+            #     f"v_x_scaled: {0.3 * self.raw_env.env.walkers[0].hull.linearVelocity.x * (VIEWPORT_W / SCALE) / FPS}"
+            # )
+            # print(f"target_v: {self.raw_env.env.target_v}")
+            # print("--------------------------------")
         if self.cur_step == self.max_cycles:
             trunc = {agent: True for agent in self.agents}
             for agent in self.agents:

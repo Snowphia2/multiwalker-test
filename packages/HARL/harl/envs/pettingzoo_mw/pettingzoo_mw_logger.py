@@ -15,6 +15,7 @@ class PettingZooMWLogger(BaseLogger):
                 [] for _ in range(self.algo_args["eval"]["n_eval_rollout_threads"])
             ],
             "package_x": [],
+            "v_deviation": [],
         }
 
     def init(self, episodes):
@@ -26,6 +27,7 @@ class PettingZooMWLogger(BaseLogger):
                 [] for _ in range(self.algo_args["eval"]["n_eval_rollout_threads"])
             ],
             "package_x": [],
+            "v_deviation": [],
         }
 
     def get_task_name(self):
@@ -55,6 +57,9 @@ class PettingZooMWLogger(BaseLogger):
                 if eval_dones[i][0]:
                     self.test_data["terminate_at"].append(eval_infos[i][0]["curr_step"])
                     self.test_data["package_x"].append(eval_infos[i][0]["package_x"])
+                    self.test_data["v_deviation"].append(
+                        eval_infos[i][0]["v_deviation"]
+                    )
             for eval_i in range(self.algo_args["eval"]["n_eval_rollout_threads"]):
                 self.one_episode_rewards[eval_i].append(eval_rewards[eval_i])
             self.eval_infos = eval_infos
@@ -69,7 +74,10 @@ class PettingZooMWLogger(BaseLogger):
             "eval_max_episode_rewards": [np.max(self.eval_episode_rewards)],
             "eval_average_steps": [np.mean(self.test_data["terminate_at"])],
             "eval_terminate_x": [np.mean(self.test_data["package_x"])],
+            # "eval_v_deviation": self.test_data["v_deviation"],
+            "eval_average_v_deviation": [np.mean(self.test_data["v_deviation"])],
         }
+        # print(eval_env_infos)
         self.log_env(eval_env_infos)
         eval_avg_rew = np.mean(self.eval_episode_rewards)
         print("Evaluation average episode reward is {}.\n".format(eval_avg_rew))

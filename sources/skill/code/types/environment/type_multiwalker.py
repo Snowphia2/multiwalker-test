@@ -33,6 +33,7 @@ class MultiWalkerConfig:
     terrain_length: int = 200
     max_cycles: int = 500
     scenario: str = "default"
+    terrain_config: Optional[List[dict]] = None
     custom: Optional[dict] = None
 
 
@@ -69,5 +70,8 @@ class MultiWalkerTweakConfig:
     max_cycles: Optional[int] = None
     scenario: Optional[str] = None
     custom: Optional[dict] = None
+
+    terrain_config: Optional[List[dict]] = None
+
     reward_factor: Optional[float] = None
     move_idle_reward: Optional[float] = None

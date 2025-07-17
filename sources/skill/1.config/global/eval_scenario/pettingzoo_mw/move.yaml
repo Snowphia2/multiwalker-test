@@ -1,19 +1,22 @@
 name: move
 desc: 变速场景
 
+env_tweak:
+  terrain_config: [{'type': 'flat', 'length': 20}, {'type': 'up', 'length': 5, 'angle': 10}, {'type': 'flat', 'length': 200}]
+
 disturbances:
   - name: skill_move_speed
-    start_at: 200
+    start_at: 12200
     end_at: 300
     disturbance_args:
       speed: 0.4
-  - name: skill_move_speed
-    start_at: 400
-    end_at: 600
-    disturbance_args:
-      speed: 0
-  - name: skill_move_speed
-    start_at: 700
-    end_at: 900
-    disturbance_args:
-      speed: 0.6
+  # - name: skill_move_speed
+  #   start_at: 400
+  #   end_at: 750
+  #   disturbance_args:
+  #     speed: 0.1
+  # - name: skill_move_speed
+  #   start_at: 800
+  #   end_at: 1000
+  #   disturbance_args:
+  #     speed: 0.6

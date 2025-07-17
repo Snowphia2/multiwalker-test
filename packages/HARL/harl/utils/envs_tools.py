@@ -158,6 +158,7 @@ def make_eval_env(env_name, seed, n_threads, env_args):
                     PettingZooMWEnv,
                 )
 
+                env_args["custom"]["is_eval"] = True
                 env = PettingZooMWEnv(env_args)
             else:
                 print("Can not support the " + env_name + "environment.")

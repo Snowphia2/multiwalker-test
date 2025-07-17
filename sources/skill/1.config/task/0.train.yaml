@@ -6,6 +6,7 @@ defaults:
   - algorithm_parameters: ${algorithm}
   - environment_parameters: ${environment}
   - optional environment_scenario: ${environment}/${scenario}
+  - eval_scenario: ${environment}/${scenario}
   - override hydra/launcher: submitit_local
   - _self_
 

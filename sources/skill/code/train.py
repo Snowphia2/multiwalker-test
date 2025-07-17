@@ -53,6 +53,11 @@ def _to_harl_dict(
     algo_dict = _to_dict(algo_args)
     env_dict = _to_dict(env_args)
 
+    # disturbances的引入
+    env_dict["custom"]["eval_disturb"] = _to_dict(cfg.eval_scenario).get(
+        "disturbances", []
+    )
+
     # 1.4 执行env_tweak
     env_tweak = _to_dict(cfg.environment.env_tweak)
     for key in env_tweak.keys():
@@ -144,6 +149,14 @@ def main(cfg: TrainConfig):
         summary="max",
     )
     wandb.define_metric(
+        "eval_average_episode_rewards",
+        summary="last",
+    )
+    wandb.define_metric(
+        "eval_average_steps",
+        summary="last",
+    )
+    wandb.define_metric(
         "eval_average_steps",
         summary="max",
     )
@@ -154,6 +167,14 @@ def main(cfg: TrainConfig):
     wandb.define_metric(
         "eval_terminate_x",
         summary="max",
+    )
+    wandb.define_metric(
+        "eval_average_v_deviation",
+        summary="last",
+    )
+    wandb.define_metric(
+        "eval_average_v_deviation",
+        summary="min",
     )
 
     # 5. 启动训练
