@@ -193,7 +193,7 @@ class raw_env(AECEnv, EzPickle):
         self.talk = custom_parameters.get("talk", False)
         self.scenario = custom_parameters.get("scenario", "default")
         print("scenario: ", self.scenario)
-        if self.scenario == "custom":
+        if self.scenario == "default":
             self.env = _env_custom(*args, **kwargs)
         elif self.scenario == "move":
             print("mw_move")
