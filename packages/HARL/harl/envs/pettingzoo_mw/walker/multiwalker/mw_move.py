@@ -115,6 +115,12 @@ class MultiWalkerEnv(MultiWalkerEnv_base):
         self.set_target_v(target_v)
         self.set_target_h(target_h)
 
+    def get_target_v_agent(self, agent_idx: int) -> float:
+        return self.walkers[agent_idx].target_v
+
+    def get_target_h_agent(self, agent_idx: int) -> float:
+        return self.walkers[agent_idx].target_h
+
     def scroll_subroutine(self):
         rewards, done, obs = super().scroll_subroutine()
 
@@ -130,7 +136,7 @@ class MultiWalkerEnv(MultiWalkerEnv_base):
                 0.3 * self.walkers[i].hull.linearVelocity.x * (VIEWPORT_W / SCALE) / FPS
             )
             reward_v_deviation_penalty = self.reward_factor * _calc_bowl(
-                self.target_v, v_x
+                self.get_target_v_agent(i), v_x
             )
             rewards[i] += reward_v_deviation_penalty
 

@@ -1,3 +1,6 @@
+defaults:
+  - default
+
 name: pettingzoo_mw
 scenario: raw
 
@@ -6,4 +9,5 @@ env_tweak:
   max_cycles: 500
   reward_factor: 10.0
   # move_idle_reward: 0.0
+  terminate_reward: -10.0
 
