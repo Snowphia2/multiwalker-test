@@ -1,36 +1,58 @@
-from __future__ import annotations
-
-import os
+import rich.pretty
 import time
-import asyncio
+import wandb
 import hydra
 import rich
-from rich.panel import Panel
-import omegaconf
-import wandb
-
+from datetime import datetime
+from .types.task.eval_type import EvalConfig
+from .train import _to_dict
+from .train import _to_harl_dict as _train_to_harl_dict
+import os
+import json
+import atexit
 from harl.envs.pettingzoo_mw.pettingzoo_mw_logger import PettingZooMWLogger
-import hydra_type_2
-from hydra import initialize, compose
-from hydra.core.global_hydra import GlobalHydra
 from moviepy.editor import VideoFileClip
 import imageio
-from .llm_runner import SwitchableRunner
+from .llm_runner import InstructRunner
+import asyncio
 
 os.environ["SDL_VIDEODRIVER"] = "dummy"
 
-# 设置字体路径
-# font_path = "/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc"  # 确保路径正确
-# font_prop = font_manager.FontProperties(fname=font_path)
-# plt.rcParams["font.family"] = font_manager.FontProperties(fname=font_path).get_name()
-# plt.rcParams["axes.unicode_minus"] = False  # 解决负号显示问题
-wandb_results = []
-max_cycles = 10000
 
-
-def export_gif(
-    config_name, frames_arr, rewards_arr, globalConfig: hydra_type_2.EntrypointConfig
+def _to_harl_dict(
+    cfg: EvalConfig,
 ):
+    (
+        algo_dict,
+        env_dict,
+        basic_info,
+        algorithm_name,
+        env_name,
+        scenario_name,
+        run_group,
+        save_group,
+    ) = _train_to_harl_dict(cfg)
+
+    if cfg.eval_scenario.env_tweak is not None:
+        eval_env_tweak = _to_dict(cfg.eval_scenario.env_tweak)
+        for key in eval_env_tweak.keys():
+            if not key.startswith("_") and key != "tweak_types":
+                env_dict[key] = eval_env_tweak[key]
+                print(f"eval_env_tweak: {key} = {eval_env_tweak[key]}")
+
+    return (
+        algo_dict,
+        env_dict,
+        basic_info,
+        algorithm_name,
+        env_name,
+        scenario_name,
+        run_group,
+        save_group,
+    )
+
+
+def export_gif(config_name, frames_arr, rewards_arr):
     # 文件夹
 
     rich.print(f"Exporting gif for {config_name}")
@@ -44,10 +66,9 @@ def export_gif(
     for i, frames in enumerate(frames_arr):
         # 1. gif生成
         rewards = rewards_arr[i]
-        is_negative = rewards < 0  # {'fail' if is_negative else 'success'}_
         gif_path = os.path.join(
             gif_folder,
-            f"{i}_[{rewards:.2f}]_{config_name}.gif",
+            f"{config_name}_[{rewards:.2f}]_{i}.gif",
         )
         imageio.mimwrite(
             gif_path,
@@ -60,7 +81,7 @@ def export_gif(
         clip.write_videofile(
             os.path.join(
                 gif_folder,
-                f"{i}_[{rewards:.2f}]_{config_name}.mp4",
+                f"{config_name}_[{rewards:.2f}]_{i}.mp4",
             ),
             codec="libx264",
             logger=None,
@@ -70,154 +91,84 @@ def export_gif(
         os.remove(gif_path)
 
 
-def _to_dict(cfg1) -> dict:
-    return omegaconf.OmegaConf.to_container(cfg1, resolve=True, throw_on_missing=True)  # pyright: ignore
-
-
-async def run_evaluations(config: hydra_type_2.EntrypointConfig, algorithm: str):
-    """执行baseline和扰动测试的评估"""
-    gif_dir = os.path.join(
-        hydra.core.hydra_config.HydraConfig.get().runtime.output_dir, "./videos"
-    )
-    os.makedirs(gif_dir, exist_ok=True)
-
-    for scenario_name, scenario in config.disturbances.items():
-        scenario: hydra_type_2.ScenarioConfig = scenario
-        await eval(
-            config,
-            algorithm=algorithm,
-            checkpoint_type="raw",
-            eval_scenario=scenario,
-        )
-
-
-async def eval(
-    entrypointConfig: hydra_type_2.EntrypointConfig,
-    algorithm: str,
-    checkpoint_type: str,
-    eval_scenario: hydra_type_2.ScenarioConfig,
+def eval(
+    config: EvalConfig,
 ):
     start_time = time.time()
-    assert entrypointConfig.policy_sets is not None, "policy_sets is required"
+    rich.print(f"Evaluation started at {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
 
-    # 先取出所有的policy
-    policies = {
-        policy.name: policy.dir for policy in entrypointConfig.policy_sets.choices
-    }
-    default_policy_name = entrypointConfig.policy_sets.default
-    default_policy_dir = policies[default_policy_name]
-    policy_reversed_motors = {
-        policy.name: policy.reverse_motor
-        for policy in entrypointConfig.policy_sets.choices
-    }
-    base_checkpoint_path = (
-        f"/pettingzoo_mw/multiwalker/{algorithm}/[{algorithm}]<{checkpoint_type}>"
-    )
-    for key in ["n_walkers", *entrypointConfig.env_tweak.tweak_types]:
+    # 0. 处理参数
+    (
+        algo_dict,
+        env_dict,
+        basic_info,
+        algorithm_name,
+        env_name,
+        scenario_name,
+        run_group,
+        save_group,
+    ) = _to_harl_dict(config)
+
+    # 1. 加载模型
+    model_path = f"./results/models/{save_group}/{env_name}/multiwalker/{algorithm_name}/[{algorithm_name}]<{scenario_name}>"
+    rich.print(f"Loading model from {model_path}")
+
+    name_suffix = ""
+    for key in ["n_walkers", *sorted(config.environment.env_tweak.tweak_types)]:
         if not key.startswith("_"):
-            base_checkpoint_path += f"<{key}={entrypointConfig.env_tweak[key]}>"  # pyright: ignore
-    # rich.print(os.listdir(default_policy_dir + base_checkpoint_path))
-
-    policy_args = hydra_type_2.PolicyArg(
-        default_policy_name=default_policy_name,
-        default_policy_dir=default_policy_dir,
-        policies=policies,
-        policy_reversed_motors=policy_reversed_motors,
-        checkpoint_prefix=base_checkpoint_path,
-    )
+            name_suffix += f"<{key}={config.environment.env_tweak[key]}>"
+    model_path += name_suffix
 
     seed_folder = next(
-        folder
-        for folder in os.listdir(default_policy_dir + base_checkpoint_path)
-        if folder.startswith("seed-")
-    )
-    rich.print(default_policy_dir)
-    rich.print(default_policy_name)
-    rich.print(policies)
-    checkpoint_path = os.path.join(
-        default_policy_dir + base_checkpoint_path, seed_folder, "models"
-    )
-    # 1. 先读取对应的模型
-    rich.print(
-        Panel(
-            f"Checkpoint Path: {checkpoint_path}\nScenario Name: {eval_scenario.name}",
-            title="Evaluation Info",
-        )
+        folder for folder in os.listdir(model_path) if folder.startswith("seed-")
     )
 
-    # 1.1. 从配置里读取参数，转换为harl使用的格式
-    with initialize(version_base=None, config_path="./configs"):
-        cfg = compose(
-            config_name="train",
-            overrides=[
-                f"algorithm={algorithm}",
-                f"environment={checkpoint_type}",
-            ],
-        )
-        algo_args = cfg.algorithm
-        env_args = cfg.environment
+    checkpoint_path = os.path.join(model_path, seed_folder, "models")
+    rich.print(f"Loading model from {checkpoint_path}")
 
-        algorithm_name = cfg.algorithm.name
-        env_name = cfg.environment.name
-        scenario_name = cfg.environment.scenario
-        basic_info = {
-            "env": env_name,
-            "algo": algorithm_name,
-            "exp_name": f"testing_<{algorithm_name}>_{scenario_name}",
-        }
-        # 特殊处理max_cycles
+    # 2. 修改参数为eval可用的
+    def _modify_algo_and_env_dict():
+        algo_dict["train"]["model_dir"] = checkpoint_path  # 模型位置
+
+        algo_dict["eval"]["n_eval_rollout_threads"] = (  # eval thread
+            config.eval_settings.general.eval_threads
+        )
+        algo_dict["eval"]["eval_episodes"] = config.eval_settings.general.eval_episodes
+
+        # render
+        algo_dict["render"]["use_render"] = config.eval_settings.functions.render
+        algo_dict["render"]["render_episodes"] = (
+            config.eval_settings.functions.render_episodes
+        )
+        # FIXME: 为什么需要这个？
         if (
             env_name == "pettingzoo_mw"
-            and algo_args.train.get("episode_length") is not None
+            and algo_dict["train"].get("num_env_steps") is not None
         ):
-            algo_args.train.episode_length = entrypointConfig.env_tweak.max_cycles
-        env_args.max_cycles = entrypointConfig.env_tweak.max_cycles
+            algo_dict["train"]["num_env_steps"] = 1  # FIXME: ???
 
-        algo_args.train.model_dir = checkpoint_path  # 读取模型！
-        rich.print(algo_args.train.model_dir)
-
-        # 配置eval遍数
-        algo_args.eval.n_eval_rollout_threads = (
-            entrypointConfig.basic_config.eval_threads
-        )
-        algo_args.eval.eval_episodes = entrypointConfig.basic_config.eval_episodes
-
-        # gpu
-        algo_args.device.cuda = entrypointConfig.basic_config.use_gpu
-
-        # 配置render
-        if entrypointConfig.basic_config.render:
-            algo_args.render.use_render = True
-            algo_args.render.render_episodes = (
-                entrypointConfig.basic_config.eval_episodes
-            )
-
-        # 配置num_env_steps
-        if (
-            env_name == "pettingzoo_mw"
-            and algo_args.train.get("num_env_steps") is not None
-        ):
-            algo_args.train.num_env_steps = 1  # FIXME: ???
-
-        algo_dict = _to_dict(algo_args)
-        algo_dict.pop("name")
-
-        env_dict = _to_dict(env_args)
-        del env_dict["name"]
-        del env_dict["scenario"]
-
-        # 处理env_tweaks
-        for key, value in _to_dict(entrypointConfig.env_tweak).items():
-            if value is not None:
-                env_dict[key] = value
-        env_dict["custom"]["eval_disturb"] = _to_dict(eval_scenario)["disturbances"]
+        # disturbances的引入
         env_dict["custom"]["is_eval"] = True
-        del env_dict["tweak_types"]
+        env_dict["custom"]["eval_disturb"] = _to_dict(config.eval_scenario).get(
+            "disturbances", []
+        )
 
-        # ============== 处理完毕config，启动runner实例 ==============
-        runner = SwitchableRunner(basic_info, algo_dict, env_dict, policy_args)
+    _modify_algo_and_env_dict()
 
-        if entrypointConfig.basic_config.render:
+    rich.pretty.pprint(env_dict, expand_all=True)
+
+    # 3. 初始化runner
+    runner: InstructRunner = InstructRunner(basic_info, algo_dict, env_dict)
+
+    @atexit.register
+    def _cleanup():
+        runner.close()
+        wandb.finish()
+
+    # 4. render？还是eval？
+    if config.eval_settings.functions.render:
+
+        async def _render():
             render_mode = "rgb_array"
             (
                 rgb_array,
@@ -225,96 +176,146 @@ async def eval(
                 episode_obses_arr,
                 lidar_obs_arr,
             ) = await runner.exec(render_mode)
-            config_name = f"[{algorithm}]<{checkpoint_type}>_{eval_scenario.name}"
-            for key in ["n_walkers", *entrypointConfig.env_tweak.tweak_types]:
-                if not key.startswith("_"):
-                    config_name += f"<{key}={entrypointConfig.env_tweak[key]}>"
-            export_gif(
-                config_name=config_name,
-                frames_arr=rgb_array,
-                rewards_arr=rewards_arr,
-                globalConfig=entrypointConfig,
-            )
+            config_name = f"[{algorithm_name}]<{env_name}>_{scenario_name}{name_suffix}"
+            # 保存episode_obses_arr到JSON文件
+            if (
+                episode_obses_arr is not None
+                and config.eval_settings.functions.export_angle_data
+            ):
+                json_dir = os.path.join(
+                    hydra.core.hydra_config.HydraConfig.get().runtime.output_dir,
+                    "./data/",
+                )
+                os.makedirs(json_dir, exist_ok=True)
 
-            exit()
+                json_path = os.path.join(json_dir, f"{config_name}_episode_obses.json")
+
+                # # 将numpy数组转换为列表以便JSON序列化
+                episode_obses_serializable = []
+                for episode in episode_obses_arr:
+                    episode_serializable = []
+                    for agent_obses in episode:
+                        episode_serializable.append(
+                            [obs.tolist() for obs in agent_obses]
+                        )
+                    episode_obses_serializable.append(episode_serializable)
+
+                with open(json_path, "w", encoding="utf-8") as f:
+                    json.dump(episode_obses_serializable, f, ensure_ascii=False)
+
+                # 和上面一样，也存一份lidar_obs_arr
+                json_path = os.path.join(json_dir, f"{config_name}_lidar_obs.json")
+                with open(json_path, "w", encoding="utf-8") as f:
+                    json.dump(lidar_obs_arr, f, ensure_ascii=False)
+
+                rich.print(f"Episode observations saved to: {json_path}")
+            if rgb_array is not None:
+                export_gif(
+                    config_name=config_name,
+                    frames_arr=rgb_array,
+                    rewards_arr=rewards_arr,
+                )
+
+        asyncio.run(_render())
+        logger: PettingZooMWLogger = runner.logger
+        terminate_arr = logger.test_data["terminate_at"]
+        angle_arr = logger.test_data["angle_data"]
+        print(f"terminate_arr: {terminate_arr}")
+        if hasattr(runner, "eval_envs") and runner.eval_envs is not None:
+            runner.eval_envs.close()
+        runner.close()
+        end_time = time.time()
+        print(f"Render time: {end_time - start_time} seconds")
+    else:
+        # 根据是否是off-policy，选择不同的eval方式
+        has_logger = hasattr(runner, "logger")
+        if has_logger:
+            logger: PettingZooMWLogger = runner.logger
+            logger.is_testing = (
+                True  # 标识目前在eval；但是eval这个词被它用了，只能用test了。
+            )
+            runner.eval()
+            terminate_arr = logger.test_data["terminate_at"]
+            angle_arr = logger.test_data["angle_data"]
         else:
-            # 根据是否是off-policy，选择不同的eval方式
-            has_logger = hasattr(runner, "logger")
-            if has_logger:
-                logger: PettingZooMWLogger = runner.logger
-                logger.is_testing = (
-                    True  # 标识目前在eval；但是eval这个词被它用了，只能用test了。
-                )
-                runner.eval()
-                terminate_arr = logger.test_data["terminate_at"]
-                angle_arr = logger.test_data["angle_data"]
-            else:
-                logger = None
-                runner.eval(1)
-                terminate_arr = runner.eval_episode_lens
-                angle_arr = runner.eval_episode_angles
+            logger = None
+            runner.eval(1)
+            terminate_arr = runner.eval_episode_lens
+            angle_arr = runner.eval_episode_angles
 
-            # 开始计算
-            # 2.1 计算提前摔倒的次数
-            terminate_cnt = 0
-            package_x = []
-            for i in range(len(terminate_arr)):
-                if (
-                    terminate_arr[i] + 2 < entrypointConfig.env_tweak.max_cycles
-                ):  # +2 去除一点边际问题
-                    terminate_cnt += 1
-                package_x.append(
-                    logger.test_data["package_x"][i]
-                    if has_logger
-                    else runner.episode_xs[i]
-                )
-            # 关闭eval_envs和runner
-            if hasattr(runner, "eval_envs") and runner.eval_envs is not None:
-                runner.eval_envs.close()
-            runner.close()
-
-            end_time = time.time()
-            print(
-                f"处理[{algorithm}]<{checkpoint_type}>_{eval_scenario.name} 耗时: {end_time - start_time:.2f}秒"
+        # 开始计算
+        # 2.1 计算提前摔倒的次数
+        terminate_cnt = 0
+        package_x = []
+        for i in range(len(terminate_arr)):
+            if (
+                terminate_arr[i] + 2 < config.environment.env_tweak.max_cycles
+            ):  # +2 去除一点边际问题
+                terminate_cnt += 1
+            package_x.append(
+                logger.test_data["package_x"][i] if has_logger else runner.episode_xs[i]
             )
-            return_result = {
-                "desc": f"[{algorithm}]<{checkpoint_type}>_{eval_scenario.name}_{_to_dict(eval_scenario).get('desc', 'original')}",
-                "algo": algorithm,
-                "variant": checkpoint_type,
-                "scenario": eval_scenario.name,
-                "terminate_cnt": terminate_cnt,
-                "angle_data": [
-                    angle for episode_angles in angle_arr for angle in episode_angles
-                ],
-                "angle_data_grouped": angle_arr,
-                "package_x": sum(package_x) / len(package_x),
-            }
-            return return_result
+        # 关闭eval_envs和runner
+        if hasattr(runner, "eval_envs") and runner.eval_envs is not None:
+            runner.eval_envs.close()
+        runner.close()
+
+        return_result = {
+            "desc": f"[{algorithm_name}]<{scenario_name}>_{config.eval_scenario.name}_{_to_dict(config.eval_scenario).get('desc', 'original')}",
+            "algo": algorithm_name,
+            "variant": scenario_name,
+            "scenario": config.eval_scenario.name,
+            "terminate_cnt": terminate_cnt,
+            "angle_data": [
+                angle for episode_angles in angle_arr for angle in episode_angles
+            ],
+            "angle_data_grouped": angle_arr,
+            "package_x": sum(package_x) / len(package_x),
+        }
+        end_time = time.time()
+        print(f"Evaluation time: {end_time - start_time} seconds")
+        return return_result
+
+    end_time = time.time()
+    print(f"Evaluation time: {end_time - start_time} seconds")
 
 
 @hydra.main(
-    config_path="./configs/evaluation",
-    config_name="rend",
-    version_base=None,
+    config_path="../1.config/task/eval", config_name="default", version_base=None
 )
-def main(cfg: hydra_type_2.EntrypointConfig):
-    # 用于json存储的目录
-    timestamp = time.strftime("%m%d-%H:%M")
-    GlobalHydra.instance().clear()
+def main(cfg: EvalConfig):
+    rich.pretty.pprint(_to_dict(cfg), expand_all=True)
 
-    # 初始化wandb
-    run = wandb.init(
-        project=cfg.basic_config.wandb_project,
-        name=cfg.algorithm + "_" + timestamp,
-        config=_to_dict(cfg),
-        save_code=True,
-        group=cfg.basic_config.run_group,
-        job_type="eval" if not cfg.basic_config.render else "render",
+    # 2. 整理参数，转换为dict以传导给harl
+    (
+        algo_dict,
+        env_dict,
+        basic_info,
+        algorithm_name,
+        env_name,
+        scenario_name,
+        run_group,
+        save_group,
+    ) = _to_harl_dict(cfg)
+
+    # 3. 初始化wandb
+    wandb.init(
+        project=cfg.wandb.wandb_project,
+        config={"original": _to_dict(cfg), "algo": algo_dict, "env": env_dict},
+        sync_tensorboard=True,
+        # name=run_name + f"_{ts}",
+        group=run_group,
+        job_type="eval",
+        tags=[
+            env_name,
+            algorithm_name,
+            scenario_name,
+        ],
     )
-
-    asyncio.run(run_evaluations(cfg, cfg.algorithm))
-
-    run.finish()
+    # 5. 启动训练
+    result = eval(cfg)
+    wandb.log(result)
+    rich.print(result, expand_all=True)
 
 
 if __name__ == "__main__":

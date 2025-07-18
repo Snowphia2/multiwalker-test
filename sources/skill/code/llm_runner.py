@@ -8,7 +8,7 @@ import numpy as np
 from harl.utils.trans_tools import _t2n
 from harl.envs.pettingzoo_mw.pettingzoo_mw_env import PettingZooMWEnv
 from harl.envs.pettingzoo_mw.walker.multiwalker.mw_move import MultiWalkerEnv
-from llm.agent import generate_prompt
+from .llm.agent import generate_prompt
 from openai import AsyncOpenAI
 from dotenv import load_dotenv
 
@@ -53,9 +53,9 @@ class InstructRunner(OnPolicyMARunner):
         return self.envs.raw_env.env
 
     @torch.no_grad()
-    async def exec(self, render_mode="rgb_array"):
+    async def exec(self, render_mode: str = "rgb_array"):
         """Render the model."""
-        print("start rendering")
+        print("start rendering14")
         render_rgb_array = []
         rewards_arr = []
         episode_obses_arr = []
@@ -89,10 +89,6 @@ class InstructRunner(OnPolicyMARunner):
                 eval_actions_collector = []
                 # obs送入rl，产生action
                 for agent_id in range(self.num_agents):
-                    if self.actor_reverted_motor[agent_id]:
-                        _tmp = eval_obs[:, agent_id][4:9]
-                        eval_obs[:, agent_id][4:9] = eval_obs[:, agent_id][9:14]
-                        eval_obs[:, agent_id][9:14] = _tmp
                     eval_actions, temp_rnn_state = self.actor[agent_id].act(
                         eval_obs[:, agent_id],
                         eval_rnn_states[:, agent_id],
@@ -103,10 +99,6 @@ class InstructRunner(OnPolicyMARunner):
                         deterministic=True,
                     )
                     eval_rnn_states[:, agent_id] = _t2n(temp_rnn_state)
-                    if self.actor_reverted_motor[agent_id]:
-                        _tmp = eval_actions[0][0:2]
-                        eval_actions[0][0:2] = eval_actions[0][2:4]
-                        eval_actions[0][2:4] = _tmp
 
                     eval_actions_collector.append(_t2n(eval_actions))
 
@@ -179,10 +171,12 @@ class InstructRunner(OnPolicyMARunner):
                         raise Exception("Response is None")
                     import json
 
-                    policy_choices = json.loads(response)
+                    target_vs = json.loads(response)["target_vs"]
                     for agent_id in range(self.num_agents):
-                        raw_env.set_t_v_agent(agent_id, policy_choices[agent_id])
-                    print(f"Changed actor {agent_id} to {policy_choices[agent_id]}")
+                        raw_env.set_t_v_agent(agent_id, target_vs[agent_id])
+                        print(
+                            f"Changed actor {agent_id}  target_v to {target_vs[agent_id]}"
+                        )
 
             render_rgb_array.append(episode_rgb_array)
             rewards_arr.append(rewards)
@@ -192,4 +186,4 @@ class InstructRunner(OnPolicyMARunner):
         if render_mode == "rgb_array":
             return render_rgb_array, rewards_arr, episode_obses_arr, lidar_obs_arr
         else:
-            return None
+            return None, None, None, None

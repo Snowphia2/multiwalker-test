@@ -2,7 +2,7 @@ import os
 import sys
 import pandas as pd
 import numpy as np
-from llm.advanced_slope_detection import advanced_slope_detection, process_lidar_frame
+from .advanced_slope_detection import advanced_slope_detection, process_lidar_frame
 from typing import Optional
 import json
 # 支持命令行参数传入观测数据目录
@@ -17,9 +17,9 @@ import json
 ENV_DESC = """环境简介：Multiwalker 
 环境，多个双足机器人协作搬运包裹，需跨越复杂地形（如坡道、障碍等），整体向右前进
 任务简介：保持队形、稳定搬运包裹，避免掉队、拥挤和跌倒，顺利通过地形。
-当前输出说明：本帧为每20帧采样一次的观测结果。
+当前输出说明：本帧为每50帧采样一次的观测结果。
 【你的任务】为三个小人分配策略，以速度参考值的形式。速度取值范围是[0, 0.6]
-输出格式：[0.5, 0.5, 0.5]
+输出格式：{"target_vs": [0.5, 0.5, 0.5]}
 不输出任何其他文本，只输出上述选择；不使用markdown格式。使用双引号而非单引号。
 
 * 速度参考值：0.4是正常速度，0.6是加速，0.1是减速。
@@ -28,13 +28,15 @@ ENV_DESC = """环境简介：Multiwalker
 1. 包裹是一根长条
 2. 相对包裹偏移如果绝对值在0.5以内，说明还支撑着包裹；如果值为正，则在包裹左侧，反之在右侧。
 
-## policy建议
-1. 前进=向右
-2. 如果机器人在【初步判断】中提醒掉队：此时，请关注具体提示信息，如果是右侧与其他邻居机器人距离大，则更应该加速；如果是左侧与邻居机器人距离大，则更应该减速
-2. 如果机器人在【初步判断】中提醒拥挤：此时，请关注具体提示信息，如果是右侧与其他邻居机器人距离小，则该机器人更应该减速；如果是左侧与邻居机器人距离小，则该机器人更应该加速
-3. 如果最左侧的机器人掉队了，右侧的其他机器人都应该减速等它追上。
-
-3. 如果没有上述情况，都选择正常策略
+## 策略机制
+1. 前进=向右。agent0在最左侧、agent2在最右侧。
+2. 核心思路是维持三个机器人的相对距离比较稳定。
+2.1 首先关注自然就是是否出现拥挤和掉队的提示。
+2.1.1 如果某个机器人掉队了，请右侧的机器人慢下来等等它，它和它左侧的机器人一起加速赶一赶；
+2.1.2 如果某两个机器人拥挤了，那右侧的机器人们都走快点，左侧的机器人们都走慢点。
+2.2 如果出现特殊地形，考虑地形会对机器人行进速度的影响。例如如果在上坡，上坡的机器人的参考速度不变的情况下、实际的横向位移速度会变慢，那此时其他的机器人就应该走慢一点配合它、这个上坡中的机器人应该走快点。
+2.3 拥挤和掉队应该优先于地形考虑；就算某个机器人在上坡，如果右侧机器人和这个上坡机器人拥挤了，右侧机器人也应该走快一点。
+3. 如果没有上述情况，都选择正常策略[0.5, 0.5, 0.5]
 
 ## 信息
 """
@@ -95,20 +97,20 @@ def initial_judgement(row, prev_row=None):
     if prev_row is not None:
         delta_angle = abs(angle - prev_row["hull_angle"])
         if delta_angle > 0.1:
-            angle_warn = f"头部角度突变{delta_angle:.2f}，需注意。"
+            angle_warn = f"\n- 头部角度突变{delta_angle:.2f}，需注意。"
     # 头部角度绝对值
     if abs(angle) > 0.3:
-        angle_warn += f" 头部倾斜过大({angle:.2f})，注意平衡。"
+        angle_warn += f"\n- 头部倾斜过大({angle:.2f})，注意平衡。"
     # x偏移突变
     px = row["package_x_offset"]
     px_warn = ""
     if prev_row is not None:
         delta_px = abs(px - prev_row["package_x_offset"])
         if delta_px > 0.05:
-            px_warn = f"x偏移突变{delta_px:.2f}，需注意。"
+            px_warn = f"\n- x偏移突变{delta_px:.2f}，需注意。"
     # package_x_offset 只判断是否离开包裹
     if px > 0.5 or px < -0.5:
-        px_warn += f" 已离开包裹({px:.2f})，有脱离风险。"
+        px_warn += f"\n- 已离开包裹({px:.2f})，有脱离风险。"
     # 掉队/拥挤风险判断
     left_offset = row.get("left_neighbor_x_offset", 0)
     right_offset = row.get("right_neighbor_x_offset", 0)
@@ -116,17 +118,13 @@ def initial_judgement(row, prev_row=None):
     # 掉队风险（左侧距离大，且不是最左边）
     if left_offset == 0:
         neighbor_warn += " "
-    elif abs(left_offset) > 0.45:
-        neighbor_warn += f" 左侧与邻居距离大({left_offset:.2f})，有掉队风险。"
     elif abs(left_offset) < 0.25:
-        neighbor_warn += f" 左侧与邻居距离小({left_offset:.2f})，有拥挤风险。"
+        neighbor_warn += f"\n- 左侧与邻居距离小({left_offset:.2f})，有拥挤风险。"
     # 拥挤风险（右侧距离大，且不是最右边）
     if right_offset == 0:
         neighbor_warn += " "
     elif abs(right_offset) > 0.45:
-        neighbor_warn += f" 右侧与邻居距离大({right_offset:.2f})，有掉队风险。"
-    elif abs(right_offset) < 0.25:
-        neighbor_warn += f" 右侧与邻居距离小({right_offset:.2f})，有拥挤风险。"
+        neighbor_warn += f"\n- 右侧与邻居距离大({right_offset:.2f})，有掉队风险。"
     return " ".join([angle_warn, px_warn, neighbor_warn]).strip()
 
 
@@ -256,7 +254,7 @@ def generate_markdown_per_agent(obs_dir: str) -> None:
 def generate_prompt(
     obses: "list[np.ndarray]",
     lidar_obses: Optional["list[np.ndarray]"] = None,
-    ref_v: Optional["list[str]"] = None,
+    ref_v: Optional["list[float]"] = None,
 ) -> str:
     """
     接收每个agent一帧的观测（顺序与csv一致），返回prompt字符串。
@@ -282,6 +280,8 @@ def generate_prompt(
         "right_knee_angle",
         "right_knee_speed",
         "right_foot_ground_contact",
+        "target_v",
+        "target_h",
         "lidar_0",
         "lidar_1",
         "lidar_2",

@@ -13,6 +13,7 @@ from .utils.notify import notify
 class HydraStepType(Enum):
     train = "train"
     eval = "eval"
+    llm_eval = "llm_eval"
     bash = "bash"
     bark = "bark"
     render = "render"
@@ -77,6 +78,12 @@ def main(config: HydraRunConfig):
             return f"{file_cmd} {config_cmd} {multirun_cmd} {args_cmd} {group_cmd} {wandb_cmd}"
         elif HydraStepType(step.type) == HydraStepType.eval:
             file_cmd = "uv run python -m sources.skill.code.eval "
+            multirun_cmd = "--multirun" if step.multirun else ""
+            args_cmd = " ".join(step.args)
+
+            return f"{file_cmd} {multirun_cmd} {args_cmd} {group_cmd} {wandb_cmd}"
+        elif HydraStepType(step.type) == HydraStepType.llm_eval:
+            file_cmd = "uv run python -m sources.skill.code.llm_run "
             multirun_cmd = "--multirun" if step.multirun else ""
             args_cmd = " ".join(step.args)
 
