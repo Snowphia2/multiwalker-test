@@ -3,4 +3,4 @@ defaults:
   - _self_
 
 num_seconds: 3600
-use_gui: True
+use_gui: False
