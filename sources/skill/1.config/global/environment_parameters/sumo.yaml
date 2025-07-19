@@ -1,0 +1,6 @@
+defaults:
+  - defaults/default_sumo@_here_
+  - _self_
+
+num_seconds: 3600
+use_gui: True
