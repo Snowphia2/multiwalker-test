@@ -3,7 +3,7 @@ name = "mw_skill"
 version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
-requires-python = ">=3.8,<3.9"
+requires-python = ">=3.9"
 dependencies = [
   "pyyaml>=5.3.1",
   "tensorboard>=2.2.1",
@@ -34,9 +34,11 @@ dependencies = [
   "asyncio>=3.4.3",
   "httpx[socks]>=0.28.1",
   "harl",
+  "sumo_rl",
 ]
 [tool.uv.sources]
 harl = { workspace = true }
+sumo_rl = { workspace = true }
 
 [tool.uv.workspace]
-members = ["packages/HARL"]
+members = ["packages/HARL", "packages/SUMO"]
