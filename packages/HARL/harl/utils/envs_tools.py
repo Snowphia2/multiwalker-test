@@ -107,10 +107,11 @@ def make_train_env(env_name, seed, n_threads, env_args):
 
                 from harl.envs.pettingzoo_sumo.pettingzoo_sumo_env import SumoEnvConfig
 
-                assert isinstance(env_args, SumoEnvConfig), (
-                    "env_args must be a SumoEnvConfig"
-                )
-                env = PettingZooSumoEnv(env_args)
+                env_args1 = SumoEnvConfig(**env_args)
+                print("env_args1")
+                print(env_args1)
+
+                env = PettingZooSumoEnv(env_args1)
             else:
                 print("Can not support the " + env_name + "environment.")
                 raise NotImplementedError
@@ -178,11 +179,9 @@ def make_eval_env(env_name, seed, n_threads, env_args):
 
                 from harl.envs.pettingzoo_sumo.pettingzoo_sumo_env import SumoEnvConfig
 
-                assert isinstance(env_args, SumoEnvConfig), (
-                    "env_args must be a SumoEnvConfig"
-                )
+                env_args1 = SumoEnvConfig(**env_args)
 
-                env = PettingZooSumoEnv(env_args)
+                env = PettingZooSumoEnv(env_args1)
             else:
                 print("Can not support the " + env_name + "environment.")
                 raise NotImplementedError
@@ -240,10 +239,10 @@ def make_render_env(env_name, seed, env_args):
         from harl.envs.pettingzoo_sumo.pettingzoo_sumo_env import PettingZooSumoEnv
         from harl.envs.pettingzoo_sumo.pettingzoo_sumo_env import SumoEnvConfig
 
-        assert isinstance(env_args, SumoEnvConfig), "env_args must be a SumoEnvConfig"
-        env_args.render_mode = "rgb_array"
+        env_args1 = SumoEnvConfig(**env_args)
+        env_args1.render_mode = "rgb_array"
 
-        env = PettingZooSumoEnv(env_args)
+        env = PettingZooSumoEnv(env_args1)
         env.seed(seed * 60000)
     elif env_name == "gym":
         from harl.envs.gym.gym_env import GYMEnv
@@ -310,4 +309,6 @@ def get_num_agents(env, env_args, envs):
     elif env == "lag":
         return envs.n_agents
     elif env == "pettingzoo_mw":
+        return envs.n_agents
+    elif env == "pettingzoo_sumo":
         return envs.n_agents

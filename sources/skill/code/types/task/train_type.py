@@ -1,7 +1,21 @@
 from dataclasses import dataclass
-from typing import Any, List, Optional
+from typing import Optional, Union
 from ..algorithm.mappo_type import MappoConfig
-from ..environment.type_multiwalker import MultiWalkerTweakConfig, MultiWalkerConfig
+from ..environment.type_multiwalker import (
+    MultiWalkerTweakConfig,
+    MultiWalkerConfig,
+    MultiWalkerEvalScenarioConfig,
+)
+from ..environment.type_sumo import (
+    SumoTweakConfig,
+    SumoEnvConfig,
+    SumoEvalScenarioConfig,
+)
+
+
+EnvConfigType = Union[MultiWalkerConfig, SumoEnvConfig]
+TweakConfigType = Union[MultiWalkerTweakConfig, SumoTweakConfig]
+ScenarioConfigType = Union[MultiWalkerEvalScenarioConfig, SumoEvalScenarioConfig]
 
 
 @dataclass
@@ -35,29 +49,12 @@ class AlgorithmConfig:
 @dataclass
 class EnvironmentConfig:
     name: str
-    scenario: str
-    env_tweak: MultiWalkerTweakConfig
+    env_tweak: TweakConfigType
 
 
 @dataclass
 class ScenarioConfig:
     name: str
-
-
-@dataclass
-class DisturbanceConfig:
-    name: str
-    start_at: int
-    end_at: int
-    disturbance_args: Any
-
-
-@dataclass
-class EvalScenarioConfig:
-    name: str
-    desc: str
-    is_raw: Optional[bool] = False
-    disturbances: Optional[List[DisturbanceConfig]] = None
 
 
 @dataclass
@@ -78,9 +75,11 @@ class TrainConfig:
     algorithm_parameters: MappoConfig
 
     environment: EnvironmentConfig
-    environment_parameters: MultiWalkerConfig
+    environment_parameters: EnvConfigType
 
     scenario: ScenarioConfig
-    environment_scenario: Optional[dict]
+    environment_scenario: Optional[
+        dict
+    ]  # environment scenario updates some parameters of environment_parameters
 
-    eval_scenario: EvalScenarioConfig
+    eval_scenario: ScenarioConfigType

@@ -112,18 +112,14 @@ def main(config: HydraRunConfig):
     rich.print(commands)
 
     # 保存命令供复现
-    # try:
-    #     sh_reproduce = "\n".join(commands)
-    #     current_date = datetime.now().strftime("%m-%d")
-    #     current_time = datetime.now().strftime("%H-%M")
-    #     hydra_output_dir = f"src/runs/reproduce/{current_date}/{current_time}"
-    #     os.makedirs(hydra_output_dir, exist_ok=True)
+    sh_reproduce = "\n".join(commands)
+    current_date = datetime.now().strftime("%m-%d")
+    current_time = datetime.now().strftime("%H-%M")
+    hydra_output_dir = f"sources/skill/0.run/reproduce/{current_date}/{current_time}"
+    os.makedirs(hydra_output_dir, exist_ok=True)
 
-    #     reproduce_sh = f"""#!/bin/sh
-    #     uv run src/runs/reproduce/{current_date}/{current_time}/run.py --config-path="runs/reproduce/{current_date}/{current_time}" --config-name=default
-    #     """
-    #     with open(hydra_output_dir + "/reproduce.sh", "w") as f:
-    #         f.write(reproduce_sh)
+    with open(hydra_output_dir + "/reproduce.sh", "w") as f:
+        f.write(sh_reproduce)
     #     with open(hydra_output_dir + "/default.yaml", "w") as f:
     #         f.write(OmegaConf.to_yaml(config))
     #     shutil.copy("src/run.py", hydra_output_dir + "/run.py")

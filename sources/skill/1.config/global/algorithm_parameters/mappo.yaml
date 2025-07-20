@@ -12,4 +12,4 @@ device:
 train:
   eval_interval: 10
   num_env_steps: 20000000
-  n_rollout_threads: 50
+  n_rollout_threads: 10

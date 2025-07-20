@@ -1,5 +1,4 @@
 name: pettingzoo_mw
-scenario: move
 
 env_tweak: 
   n_walkers: 3

@@ -53,27 +53,26 @@ def _to_harl_dict(
     algo_dict = _to_dict(algo_args)
     env_dict = _to_dict(env_args)
 
-    # disturbances的引入
-    env_dict["custom"]["eval_disturb"] = _to_dict(cfg.eval_scenario).get(
-        "disturbances", []
-    )
+    # ----每个env可以在这里做特殊操作---
+    # 至少要修改episode_length
+
+    if env_name == "pettingzoo_mw":
+        from .types.environment.type_multiwalker import multiwalker_customize_dict
+
+        algo_dict, env_dict = multiwalker_customize_dict(cfg, algo_dict, env_dict)
+    elif env_name == "pettingzoo_sumo":
+        from .types.environment.type_sumo import sumo_customize_dict
+
+        algo_dict, env_dict = sumo_customize_dict(cfg, algo_dict, env_dict)
 
     # 1.4 执行env_tweak
+    # 1.5 执行scenario
     env_tweak = _to_dict(cfg.environment.env_tweak)
     for key in env_tweak.keys():
         if not key.startswith("_") and key != "tweak_types":
             env_dict[key] = env_tweak[key]
-
-    # 1.5 执行scenario
     if cfg.environment_scenario is not None:
         env_dict.update(_to_dict(cfg.environment_scenario))
-
-    # 1.6 同步max_cycles
-    if (
-        env_name == "pettingzoo_mw"
-        and algo_dict["train"].get("episode_length") is not None
-    ):
-        algo_dict["train"]["episode_length"] = env_dict["max_cycles"]
 
     # 1.7 生成basic_info
     basic_info = {
@@ -93,7 +92,9 @@ def _to_harl_dict(
     )
 
 
-@hydra.main(config_path="../1.config/task", config_name="0.train", version_base=None)
+@hydra.main(
+    config_path="../1.config/task/train", config_name="0.train", version_base=None
+)
 def main(cfg: TrainConfig):
     rich.pretty.pprint(_to_dict(cfg), expand_all=True)
 
@@ -110,6 +111,8 @@ def main(cfg: TrainConfig):
     ) = _to_harl_dict(cfg)
 
     # 3. 初始化runner
+    print("ENV_DICT!!")
+    rich.print(env_dict)
     runner = RUNNER_REGISTRY[algorithm_name](basic_info, algo_dict, env_dict)
 
     @atexit.register
@@ -118,7 +121,7 @@ def main(cfg: TrainConfig):
         wandb.finish()
 
     # 4. 初始化wandb
-    wandb.tensorboard.patch(root_logdir=runner.log_dir)
+    wandb.tensorboard.patch(root_logdir=runner.log_dir)  # type: ignore
     wandb.init(
         project=cfg.wandb.wandb_project,
         config={"original": _to_dict(cfg), "algo": algo_dict, "env": env_dict},

@@ -17,24 +17,9 @@ logging.getLogger().setLevel(logging.ERROR)
 class SumoEnvironmentPZWithGlobalState(sumo_rl.SumoEnvironmentPZ):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self.state_space = self.get_state_space()
 
-    # def observation_space(self, agent):
-    #     ts = self.env.traffic_signals[self.env.ts_ids[0]]
-    #     return spaces.Box(
-    #         low=np.zeros(ts.num_green_phases + 1 + 2 * len(ts.lanes), dtype=np.float32),
-    #         high=np.ones(ts.num_green_phases + 1 + 2 * len(ts.lanes), dtype=np.float32),
-    #     )
-
-    @property
-    def action_spaces(self):
-        return {a: self.env.action_spaces(a) for a in self.agents}
-
-    @property
-    def observation_spaces(self):
-        return {a: self.env.observation_spaces(a) for a in self.agents}
-
-    @property
-    def state_space(self):
+    def get_state_space(self):
         _a = self.env.ts_ids[0]
         ts = self.env.traffic_signals[_a]
         low = ts.num_green_phases + 1 + 2 * len(ts.lanes)
@@ -48,7 +33,6 @@ class SumoEnvironmentPZWithGlobalState(sumo_rl.SumoEnvironmentPZ):
         for agent in self.agents:
             obs.append(self.observe(agent))
         global_state = np.array(obs).flatten().astype(np.float32)
-
         return global_state
 
     def step(self, action):
@@ -91,6 +75,9 @@ class SumoEnvConfig:
     single_agent: bool = False
     reward_fn: str = "diff-waiting-time"
     reward_weights: Optional[list[float]] = None
+
+    observation_class: Union[str, type] = "DefaultObservationFunction"
+
     add_system_info: bool = True
     add_per_agent_info: bool = True
     sumo_seed: Union[str, int] = "random"
@@ -104,17 +91,20 @@ class PettingZooSumoEnv:
     def __init__(self, args: SumoEnvConfig):
         self.args: SumoEnvConfig = copy.deepcopy(args)
 
+        args.observation_class = sumo_rl.DefaultObservationFunction
+
         # sumo是离散动作
         self.discrete: bool = True
 
-        self.max_cycles: int = (
-            args.begin_time + args.num_seconds
-        ) // args.delta_time + 1
+        self.max_cycles: int = (args.num_seconds) // args.delta_time - 1
 
         self.cur_step: int = 0
+
+        dict_args = asdict(args)
+        del dict_args["observation_class"]
         self.env: SumoEnvironmentPZWithGlobalState = cast(
             SumoEnvironmentPZWithGlobalState,
-            parallel_env(**asdict(self.args)),
+            parallel_env(**dict_args, observation_class=args.observation_class),
         )
         self.env.reset()
 
@@ -159,12 +149,18 @@ class PettingZooSumoEnv:
         )
 
     def reset(self):
-        """Returns initial observations and states"""
+        """重置环境并返回初始观测和状态"""
         self._seed += 1
         self.cur_step = 0
-        obs = self.unwrap(self.env.reset(seed=self._seed))
+        obs, infos = self.env.reset(seed=self._seed)  # type: ignore
+        obs = self.unwrap(obs)
         s_obs = self.repeat(self.env.state())
-        return obs, s_obs, self.get_avail_actions()
+        avail_actions = self.get_avail_actions()
+
+        obs_n = np.array(obs)
+        s_obs_n = np.array(s_obs)
+        avail_actions_n = np.array(avail_actions)
+        return obs_n, s_obs_n, avail_actions_n
 
     def get_avail_actions(self):
         if self.discrete:

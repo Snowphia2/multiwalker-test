@@ -2,10 +2,8 @@
 
 from gymnasium.envs.registration import register
 
+# 导入observations模块，使其可以通过from sumo_rl.environment import observations访问
 from . import observations
-from . import traffic_signal
-from . import env
-from . import resco_envs
 
 register(
     id="sumo-rl-v0",

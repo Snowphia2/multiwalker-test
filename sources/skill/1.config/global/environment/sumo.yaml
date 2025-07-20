@@ -1,0 +1,4 @@
+name: pettingzoo_sumo
+
+env_tweak: 
+  tweak_types: []

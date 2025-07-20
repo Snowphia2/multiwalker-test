@@ -1,12 +1,15 @@
 """Import all the necessary modules for the sumo_rl package."""
 
 from sumo_rl.environment.env import (
-    ObservationFunction,
     SumoEnvironment,
     SumoEnvironmentPZ,
     TrafficSignal,
     env,
     parallel_env,
+)
+from sumo_rl.environment.observations import (
+    ObservationFunction,
+    DefaultObservationFunction,
 )
 from sumo_rl.environment.resco_envs import (
     arterial4x4,
@@ -18,8 +21,6 @@ from sumo_rl.environment.resco_envs import (
     ingolstadt7,
     ingolstadt21,
 )
-
-from sumo_rl import environment
 
 __version__ = "1.4.5"
 # __all__ = [
