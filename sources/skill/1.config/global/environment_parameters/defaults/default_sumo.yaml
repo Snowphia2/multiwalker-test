@@ -20,8 +20,10 @@ min_green: 5  # 最小绿灯时间（秒）
 max_green: 50  # 最大绿灯时间（秒）
 enforce_max_green: false  # 是否强制执行最大绿灯时间
 single_agent: false  # 是否为单智能体环境
+
 reward_fn: "diff-waiting-time"  # 奖励函数
 reward_weights: null  # 奖励函数权重列表
+
 observation_class: "DefaultObservationFunction"  # 观测函数类
 add_system_info: true  # 是否添加系统信息
 add_per_agent_info: true  # 是否添加每个智能体的信息

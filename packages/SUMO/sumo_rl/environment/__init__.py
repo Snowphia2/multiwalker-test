@@ -2,6 +2,10 @@
 
 from gymnasium.envs.registration import register
 
+from . import observations
+from . import traffic_signal
+from . import env
+from . import resco_envs
 
 register(
     id="sumo-rl-v0",

@@ -49,6 +49,7 @@ class PettingZooMWEnv:
         return local_obs, global_state, rewards, dones, infos, available_actions
         """
         obs, rew, term, trunc, info = self.env.step(self.wrap(actions))
+        print(f"obs: {obs}, rew: {rew}, term: {term}, trunc: {trunc}, info: {info}")
         self.cur_step += 1
 
         for agent in self.agents:

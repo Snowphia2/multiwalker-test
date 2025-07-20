@@ -3,6 +3,7 @@
 from sumo_rl.environment.env import (
     ObservationFunction,
     SumoEnvironment,
+    SumoEnvironmentPZ,
     TrafficSignal,
     env,
     parallel_env,
@@ -18,5 +19,22 @@ from sumo_rl.environment.resco_envs import (
     ingolstadt21,
 )
 
+from sumo_rl import environment
 
 __version__ = "1.4.5"
+# __all__ = [
+#     "ObservationFunction",
+#     "SumoEnvironment",
+#     "SumoEnvironmentPZ",
+#     "TrafficSignal",
+#     "env",
+#     "parallel_env",
+#     "arterial4x4",
+#     "cologne1",
+#     "cologne3",
+#     "cologne8",
+#     "grid4x4",
+#     "ingolstadt1",
+#     "ingolstadt7",
+#     "ingolstadt21",
+# ]
