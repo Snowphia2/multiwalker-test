@@ -92,9 +92,7 @@ def _to_harl_dict(
     )
 
 
-@hydra.main(
-    config_path="../1.config/task/train", config_name="0.train", version_base=None
-)
+@hydra.main(config_path="../1.config/task/train", config_name="sumo", version_base=None)
 def main(cfg: TrainConfig):
     rich.pretty.pprint(_to_dict(cfg), expand_all=True)
 
