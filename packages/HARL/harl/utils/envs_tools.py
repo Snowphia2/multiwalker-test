@@ -100,6 +100,17 @@ def make_train_env(env_name, seed, n_threads, env_args):
                 )
 
                 env = PettingZooMWEnv(env_args)
+            elif env_name == "pettingzoo_sumo":
+                from harl.envs.pettingzoo_sumo.pettingzoo_sumo_env import (
+                    PettingZooSumoEnv,
+                )
+
+                from harl.envs.pettingzoo_sumo.pettingzoo_sumo_env import SumoEnvConfig
+
+                assert isinstance(env_args, SumoEnvConfig), (
+                    "env_args must be a SumoEnvConfig"
+                )
+                env = PettingZooSumoEnv(env_args)
             else:
                 print("Can not support the " + env_name + "environment.")
                 raise NotImplementedError
@@ -160,6 +171,18 @@ def make_eval_env(env_name, seed, n_threads, env_args):
 
                 env_args["custom"]["is_eval"] = True
                 env = PettingZooMWEnv(env_args)
+            elif env_name == "pettingzoo_sumo":
+                from harl.envs.pettingzoo_sumo.pettingzoo_sumo_env import (
+                    PettingZooSumoEnv,
+                )
+
+                from harl.envs.pettingzoo_sumo.pettingzoo_sumo_env import SumoEnvConfig
+
+                assert isinstance(env_args, SumoEnvConfig), (
+                    "env_args must be a SumoEnvConfig"
+                )
+
+                env = PettingZooSumoEnv(env_args)
             else:
                 print("Can not support the " + env_name + "environment.")
                 raise NotImplementedError
@@ -212,6 +235,15 @@ def make_render_env(env_name, seed, env_args):
 
         manual_delay = False
         env = PettingZooMWEnv({**env_args, "render_mode": "rgb_array"})
+        env.seed(seed * 60000)
+    elif env_name == "pettingzoo_sumo":
+        from harl.envs.pettingzoo_sumo.pettingzoo_sumo_env import PettingZooSumoEnv
+        from harl.envs.pettingzoo_sumo.pettingzoo_sumo_env import SumoEnvConfig
+
+        assert isinstance(env_args, SumoEnvConfig), "env_args must be a SumoEnvConfig"
+        env_args.render_mode = "rgb_array"
+
+        env = PettingZooSumoEnv(env_args)
         env.seed(seed * 60000)
     elif env_name == "gym":
         from harl.envs.gym.gym_env import GYMEnv

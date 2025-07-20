@@ -1,8 +1,8 @@
 import copy
 import logging
 
-from dataclasses import dataclass
-from typing import Optional, Union, final, cast
+from dataclasses import asdict, dataclass
+from typing import Optional, Union, cast
 from gymnasium import spaces
 from pettingzoo.utils import wrappers
 from pettingzoo.utils.conversions import parallel_wrapper_fn
@@ -100,8 +100,7 @@ class SumoEnvConfig:
     render_mode: Optional[str] = None
 
 
-@final
-class PettingZooMPEEnv:
+class PettingZooSumoEnv:
     def __init__(self, args: SumoEnvConfig):
         self.args: SumoEnvConfig = copy.deepcopy(args)
 
@@ -115,13 +114,7 @@ class PettingZooMPEEnv:
         self.cur_step: int = 0
         self.env: SumoEnvironmentPZWithGlobalState = cast(
             SumoEnvironmentPZWithGlobalState,
-            parallel_env(  # this parallel_env here uses the above env function
-                net_file="sumo_rl/nets/4x4-Lucas/4x4.net.xml",
-                route_file="sumo_rl/nets/4x4-Lucas/4x4c1c2c1c2.rou.xml",
-                out_csv_name="outputs/4x4grid/ppo",
-                use_gui=False,
-                num_seconds=80000,
-            ),
+            parallel_env(**asdict(self.args)),
         )
         self.env.reset()
 
@@ -196,17 +189,11 @@ class PettingZooMPEEnv:
     def seed(self, seed):
         self._seed = seed
 
-    def wrap(self, l):
-        d = {}
-        for i, agent in enumerate(self.agents):
-            d[agent] = l[i]
-        return d
+    def wrap(self, target):
+        return {agent: target[i] for i, agent in enumerate(self.agents)}
 
-    def unwrap(self, d):
-        l = []
-        for agent in self.agents:
-            l.append(d[agent])
-        return l
+    def unwrap(self, target):
+        return [target[agent] for agent in self.agents]
 
     def repeat(self, a):
         return [a for _ in range(self.n_agents)]
