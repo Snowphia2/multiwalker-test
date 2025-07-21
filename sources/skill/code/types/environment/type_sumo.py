@@ -49,7 +49,7 @@ def _to_dict(cfg1) -> dict:
     return dict_result
 
 
-def sumo_customize_dict(cfg, algo_dict: dict, env_dict: dict):
+def sumo_customize_dict(cfg, algo_dict: dict, env_dict: dict, save_group: str):
     from ..task.train_type import TrainConfig
 
     cfg = cast(TrainConfig, cfg)
@@ -58,6 +58,7 @@ def sumo_customize_dict(cfg, algo_dict: dict, env_dict: dict):
         max_cycles = (env_dict["num_seconds"]) // env_dict["delta_time"]
         algo_dict["train"]["episode_length"] = max_cycles - 1
 
+    env_dict["out_csv_name"] = f"{env_dict['out_csv_name']}/{save_group}/log"
     return algo_dict, env_dict
 
 

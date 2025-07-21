@@ -519,11 +519,11 @@ class SumoEnvironment(gym.Env):
             return np.array(img)
 
     def save_csv(self, out_csv_name, episode):
-        """Save metrics of the simulation to a .csv file.
+        """保存仿真指标到CSV文件并记录到wandb.
 
         Args:
-            out_csv_name (str): Path to the output .csv file. E.g.: "results/my_results
-            episode (int): Episode number to be appended to the output file name.
+            out_csv_name (str): 输出CSV文件的路径. 例如: "results/my_results"
+            episode (int): 要附加到输出文件名的episode编号.
         """
         if out_csv_name is not None:
             df = pd.DataFrame(self.metrics)
@@ -531,6 +531,46 @@ class SumoEnvironment(gym.Env):
             df.to_csv(
                 out_csv_name + f"_conn{self.label}_ep{episode}" + ".csv", index=False
             )
+
+            # 记录到wandb
+            # try:
+            #     import wandb
+
+            #     if wandb.run is not None:
+            #         # 计算episode的平均指标
+            #         if len(self.metrics) > 0:
+            #             episode_metrics = {}
+            #             for key in self.metrics[0].keys():
+            #                 if key.startswith("system_") or key.startswith("agents_"):
+            #                     values = [
+            #                         metric[key]
+            #                         for metric in self.metrics
+            #                         if key in metric
+            #                     ]
+            #                     if values:
+            #                         episode_metrics[f"episode_{key}"] = np.mean(values)
+
+            #             # 添加episode信息
+            #             episode_metrics["episode"] = episode
+            #             episode_metrics["connection_id"] = self.label
+
+            #             # 记录到wandb
+            #             wandb.log(episode_metrics, step=episode)
+
+            #             # 可选：记录完整的metrics表格
+            #             if len(self.metrics) > 1:
+            #                 wandb.log(
+            #                     {
+            #                         f"metrics_table_ep{episode}": wandb.Table(
+            #                             dataframe=df
+            #                         )
+            #                     },
+            #                     step=episode,
+            #                 )
+            # except ImportError:
+            #     print("警告: wandb未安装，跳过wandb日志记录")
+            # except Exception as e:
+            #     print(f"警告: wandb日志记录失败: {e}")
 
     # Below functions are for discrete state space
 
@@ -636,7 +676,7 @@ class SumoEnvironmentPZ(AECEnv, EzPickle):
         return self.env.render()
 
     def save_csv(self, out_csv_name, episode):
-        """Save metrics of the simulation to a .csv file."""
+        """保存仿真指标到CSV文件并记录到wandb."""
         self.env.save_csv(out_csv_name, episode)
 
     def step(self, action):
