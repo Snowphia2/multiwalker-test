@@ -35,10 +35,16 @@ dependencies = [
   "httpx[socks]>=0.28.1",
   "harl",
   "sumo_rl",
+  "mapdn",
 ]
 [tool.uv.sources]
 harl = { workspace = true }
 sumo_rl = { workspace = true }
+mapdn = { workspace = true }
 
 [tool.uv.workspace]
-members = ["packages/HARL", "packages/SUMO"]
+members = ["packages/HARL", "packages/SUMO", "packages/MAPDN"]
+
+[[tool.uv.index]]
+url = "https://mirrors.cernet.edu.cn/pypi/web/simple"
+default = true
