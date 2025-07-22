@@ -270,12 +270,16 @@ def eval(
 
         end_time = time.time()
 
+        assert config.environment.env_tweak.max_cycles is not None
+
         return_result = {
             "desc": f"[{algorithm_name}]<{scenario_name}>_{config.eval_scenario.name}_{_to_dict(config.eval_scenario).get('desc', 'original')}",
             "algo": algorithm_name,
             "variant": scenario_name,
             "scenario": config.eval_scenario.name,
             "terminate_cnt": terminate_cnt,
+            "terminate_cnt1": len(terminate_arr),
+            "total_episodes": config.eval_settings.general.eval_episodes,
             "angle_data": angle_flatten,
             "angle_data_grouped": angle_arr,
             "angle_data_avg": sum(angle_flatten) / len(angle_flatten),
@@ -288,7 +292,12 @@ def eval(
             / len(angle_flatten),
             "package_x": sum(package_x) / len(package_x),
             "total_time": end_time - start_time,
-            "total_timesteps": sum(terminate_arr),
+            "total_timesteps": sum(terminate_arr)
+            + (config.eval_settings.general.eval_episodes - terminate_cnt)
+            * config.environment.env_tweak.max_cycles,
+            "total_timesteps1": sum(terminate_arr)
+            + (config.eval_settings.general.eval_episodes - len(terminate_arr))
+            * config.environment.env_tweak.max_cycles,
             "avg_terminate_at": sum(terminate_arr) / len(terminate_arr),
         }
         print(f"Evaluation time: {end_time - start_time} seconds")

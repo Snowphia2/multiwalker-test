@@ -35,6 +35,14 @@ class PettingZooMWLLMLogger(BaseLogger):
 
     def eval_init(self):
         super().eval_init()
+        self.test_data = {
+            "terminate_at": [],
+            "angle_data": [
+                [] for _ in range(self.algo_args["eval"]["n_eval_rollout_threads"])
+            ],
+            "package_x": [],
+            "v_deviation": [],
+        }
 
     def eval_per_step(self, eval_data):
         """Log evaluation information per step."""

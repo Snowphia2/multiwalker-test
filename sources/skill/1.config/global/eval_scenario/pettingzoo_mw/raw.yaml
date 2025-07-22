@@ -1,2 +1,5 @@
 name: raw
 desc: 初始场景
+
+env_tweak:
+  n_walkers: 3
