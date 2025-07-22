@@ -3,7 +3,7 @@ defaults:
   - _self_
 
 run_group: 250708_test
-save_group: 0716/1659 # 0710/0322 "./results/models/0716/1659"
+save_group: llm/1659 # 0710/0322 "./results/models/0716/1659"
 # save_group: 0711/0109
 steps:
   - type: llm_eval

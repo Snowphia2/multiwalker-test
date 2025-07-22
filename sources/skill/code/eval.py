@@ -15,7 +15,7 @@ import atexit
 from harl.envs.pettingzoo_mw.pettingzoo_mw_logger import PettingZooMWLogger
 from moviepy.editor import VideoFileClip
 import imageio
-
+import asyncio
 
 os.environ["SDL_VIDEODRIVER"] = "dummy"
 
@@ -92,7 +92,7 @@ def export_gif(config_name, frames_arr, rewards_arr):
         os.remove(gif_path)
 
 
-def eval(
+async def eval(
     config: EvalConfig,
 ):
     start_time = time.time()
@@ -171,11 +171,14 @@ def eval(
     # 4. render？还是eval？
     if config.eval_settings.functions.render:
 
-        def _render():
+        async def _render():
             render_mode = "rgb_array"
-            rgb_array, rewards_arr, episode_obses_arr, lidar_obs_arr = runner.render(
-                render_mode
-            )
+            (
+                rgb_array,
+                rewards_arr,
+                episode_obses_arr,
+                lidar_obs_arr,
+            ) = await runner.render(render_mode)
             config_name = f"[{algorithm_name}]<{env_name}>_{scenario_name}{name_suffix}"
             # 保存episode_obses_arr到JSON文件
             if (
@@ -216,7 +219,7 @@ def eval(
                     rewards_arr=rewards_arr,
                 )
 
-        _render()
+        await _render()
         if hasattr(runner, "eval_envs") and runner.eval_envs is not None:
             runner.eval_envs.close()
         runner.close()
@@ -309,9 +312,10 @@ def main(cfg: EvalConfig):
         ],
     )
     # 5. 启动训练
-    result = eval(cfg)
-    wandb.log(result)
-    rich.print(result, expand_all=True)
+    result = asyncio.run(eval(cfg))
+    rich.print(result)
+    if result is not None:
+        wandb.log(result)
 
 
 if __name__ == "__main__":

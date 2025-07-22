@@ -71,6 +71,8 @@ def get_task_name(env, env_args):
         task = env_args["task"]
     elif env == "lag":
         task = f"{env_args['scenario']}-{env_args['task']}"
+    elif env == "pettingzoo_mw_llm":
+        task = "multiwalker_llm"
     return task
 
 

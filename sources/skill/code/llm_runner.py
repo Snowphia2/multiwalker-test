@@ -187,3 +187,98 @@ class InstructRunner(OnPolicyMARunner):
             return render_rgb_array, rewards_arr, episode_obses_arr, lidar_obs_arr
         else:
             return None, None, None, None
+
+    @torch.no_grad()
+    def eval(self):
+        """Evaluate the model."""
+        self.logger.eval_init()  # logger callback at the beginning of evaluation
+        eval_episode = 0
+
+        assert self.eval_envs is not None
+        eval_obs, eval_share_obs, eval_available_actions = self.eval_envs.reset()
+
+        eval_rnn_states = np.zeros(
+            (
+                self.algo_args["eval"]["n_eval_rollout_threads"],
+                self.num_agents,
+                self.recurrent_n,
+                self.rnn_hidden_size,
+            ),
+            dtype=np.float32,
+        )
+        eval_masks = np.ones(
+            (self.algo_args["eval"]["n_eval_rollout_threads"], self.num_agents, 1),
+            dtype=np.float32,
+        )
+
+        while True:
+            eval_actions_collector = []
+            for agent_id in range(self.num_agents):
+                eval_actions, temp_rnn_state = self.actor[agent_id].act(
+                    eval_obs[:, agent_id],
+                    eval_rnn_states[:, agent_id],
+                    eval_masks[:, agent_id],
+                    eval_available_actions[:, agent_id]
+                    if eval_available_actions[0] is not None
+                    else None,
+                    deterministic=True,
+                )
+                eval_rnn_states[:, agent_id] = _t2n(temp_rnn_state)
+                eval_actions_collector.append(_t2n(eval_actions))
+
+            eval_actions = np.array(eval_actions_collector).transpose(1, 0, 2)
+
+            (
+                eval_obs,
+                eval_share_obs,
+                eval_rewards,
+                eval_dones,
+                eval_infos,
+                eval_available_actions,
+            ) = self.eval_envs.step(eval_actions)
+            eval_data = (
+                eval_obs,
+                eval_share_obs,
+                eval_rewards,
+                eval_dones,
+                eval_infos,
+                eval_available_actions,
+            )
+            self.logger.eval_per_step(
+                eval_data
+            )  # logger callback at each step of evaluation
+
+            eval_dones_env = np.all(eval_dones, axis=1)
+
+            eval_rnn_states[eval_dones_env == True] = (
+                np.zeros(  # if env is done, then reset rnn_state to all zero
+                    (
+                        (eval_dones_env == True).sum(),
+                        self.num_agents,
+                        self.recurrent_n,
+                        self.rnn_hidden_size,
+                    ),
+                    dtype=np.float32,
+                )
+            )
+
+            eval_masks = np.ones(
+                (self.algo_args["eval"]["n_eval_rollout_threads"], self.num_agents, 1),
+                dtype=np.float32,
+            )
+            eval_masks[eval_dones_env == True] = np.zeros(
+                ((eval_dones_env == True).sum(), self.num_agents, 1), dtype=np.float32
+            )
+
+            for eval_i in range(self.algo_args["eval"]["n_eval_rollout_threads"]):
+                if eval_dones_env[eval_i]:
+                    eval_episode += 1
+                    self.logger.eval_thread_done(
+                        eval_i
+                    )  # logger callback when an episode is done
+
+            if eval_episode >= self.algo_args["eval"]["eval_episodes"]:
+                self.logger.eval_log(
+                    eval_episode
+                )  # logger callback at the end of evaluation
+                break
