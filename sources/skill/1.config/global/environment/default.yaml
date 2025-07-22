@@ -10,4 +10,5 @@ env_tweak:
   remove_on_fall: False
   terrain_length: 600
   max_cycles: 500
-
+  tweak_types:
+    - n_walkers

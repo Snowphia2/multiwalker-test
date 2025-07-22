@@ -31,10 +31,10 @@ def _to_harl_dict(
 
     # 1.1 生成run_name
     run_name = f"[{algorithm_name}]<{scenario_name}>"
-    env_tweaks = _to_dict(cfg.environment.env_tweak)
-    for key in env_tweaks.keys():
+    env_tweaks = cfg.environment.env_tweak
+    for key in env_tweaks.tweak_types:
         if not key.startswith("_"):
-            run_name += f"<{key}={env_tweaks[key]}>"
+            run_name += f"<{key}={_to_dict(env_tweaks)[key]}>"
 
     # 1.2 生成wandb_group 和 save_group
     now_time = datetime.now().strftime("%m%d/%H%M")

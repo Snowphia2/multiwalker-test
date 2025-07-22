@@ -609,7 +609,7 @@ class OnPolicyBaseRunner:
                 break
 
     @torch.no_grad()
-    async def render(self, render_mode="human"):
+    def render(self, render_mode="human"):
         """Render the model."""
         print("start rendering")
         render_rgb_array = []
@@ -666,7 +666,7 @@ class OnPolicyBaseRunner:
                         eval_dones,
                         _,
                         eval_available_actions,
-                    ) = await self.envs.step(eval_actions[0])
+                    ) = self.envs.step(eval_actions[0])
                     rewards += eval_rewards[0][0]
                     eval_obs = np.expand_dims(np.array(eval_obs), axis=0)
                     eval_available_actions = (

@@ -14,8 +14,9 @@ from harl.envs.pettingzoo_mw.walker.multiwalker.mw_move import MultiWalkerEnv
 from pettingzoo.utils.conversions import aec_to_parallel_wrapper
 from .llm.agent import generate_prompt
 import os
-from openai import AsyncOpenAI
 from dotenv import load_dotenv
+
+from openai import OpenAI
 
 logging.basicConfig()
 logging.getLogger().setLevel(logging.DEBUG)
@@ -24,17 +25,18 @@ logging.getLogger().setLevel(logging.DEBUG)
 # 加载环境变量
 load_dotenv()
 
-# 配置OpenAI客户端
-client = AsyncOpenAI(
+
+# 配置OpenAI客户端（同步）
+client = OpenAI(
     api_key=os.getenv("OPENAI_API_KEY"),
     base_url=os.getenv("OPENAI_BASE_URL", "https://api.openai.com/v1"),
 )
 
 
-async def get_model_response(model, prompt_content):
-    """获取单个模型的响应"""
+def get_model_response(model, prompt_content):
+    """获取单个模型的响应（同步阻塞版）"""
     try:
-        response = await client.chat.completions.create(
+        response = client.chat.completions.create(
             model=model,
             messages=[{"role": "user", "content": prompt_content}],
         )
@@ -73,7 +75,7 @@ class PettingZooMWLLMEnv:
             {agent: self.env.action_space(agent) for agent in self.agents}
         )
 
-    async def step(self, actions):
+    def step(self, actions):
         """
         return local_obs, global_state, rewards, dones, infos, available_actions
         """
@@ -93,7 +95,7 @@ class PettingZooMWLLMEnv:
             ]
             prompt = generate_prompt(llm_obses, llm_lidar_obses, target_vs)  # needs
             # start_time = time.time()
-            model, response = await get_model_response("gpt-4o", prompt)
+            model, response = get_model_response("gpt-4o", prompt)
             # rich.print(response)
             # end_time = time.time()
             # rich.print(f"Time taken: {end_time - start_time} seconds")

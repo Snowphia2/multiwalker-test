@@ -1,3 +1,4 @@
+from harl.runners.off_policy_base_runner import OffPolicyBaseRunner
 import rich.pretty
 import time
 import wandb
@@ -15,7 +16,7 @@ import atexit
 from harl.envs.pettingzoo_mw.pettingzoo_mw_logger import PettingZooMWLogger
 from moviepy.editor import VideoFileClip
 import imageio
-import asyncio
+from typing import cast
 
 os.environ["SDL_VIDEODRIVER"] = "dummy"
 
@@ -33,6 +34,8 @@ def _to_harl_dict(
         run_group,
         save_group,
     ) = _train_to_harl_dict(cfg)
+
+    rich.print(algo_dict)
 
     if cfg.eval_scenario.env_tweak is not None:
         eval_env_tweak = _to_dict(cfg.eval_scenario.env_tweak)
@@ -92,7 +95,7 @@ def export_gif(config_name, frames_arr, rewards_arr):
         os.remove(gif_path)
 
 
-async def eval(
+def eval(
     config: EvalConfig,
 ):
     start_time = time.time()
@@ -115,6 +118,7 @@ async def eval(
     rich.print(f"Loading model from {model_path}")
 
     name_suffix = ""
+    rich.print(config.environment.env_tweak.tweak_types)
     for key in ["n_walkers", *sorted(config.environment.env_tweak.tweak_types)]:
         if not key.startswith("_"):
             name_suffix += f"<{key}={config.environment.env_tweak[key]}>"
@@ -143,9 +147,8 @@ async def eval(
         )
         # FIXME: 为什么需要这个？
         if (
-            env_name == "pettingzoo_mw"
-            and algo_dict["train"].get("num_env_steps") is not None
-        ):
+            env_name == "pettingzoo_mw" or env_name == "pettingzoo_mw_llm"
+        ) and algo_dict["train"].get("num_env_steps") is not None:
             algo_dict["train"]["num_env_steps"] = 1  # FIXME: ???
 
         # disturbances的引入
@@ -156,29 +159,28 @@ async def eval(
 
     _modify_algo_and_env_dict()
 
+    rich.pretty.pprint(algo_dict, expand_all=True)
     rich.pretty.pprint(env_dict, expand_all=True)
 
     # 3. 初始化runner
-    runner: OnPolicyMARunner = RUNNER_REGISTRY[algorithm_name](
-        basic_info, algo_dict, env_dict
-    )
+    runner = RUNNER_REGISTRY[algorithm_name](basic_info, algo_dict, env_dict)
 
     @atexit.register
     def _cleanup():
         runner.close()
-        wandb.finish()
+        # wandb.finish()
 
     # 4. render？还是eval？
     if config.eval_settings.functions.render:
 
-        async def _render():
+        def _render():
             render_mode = "rgb_array"
             (
                 rgb_array,
                 rewards_arr,
                 episode_obses_arr,
                 lidar_obs_arr,
-            ) = await runner.render(render_mode)
+            ) = runner.render(render_mode)
             config_name = f"[{algorithm_name}]<{env_name}>_{scenario_name}{name_suffix}"
             # 保存episode_obses_arr到JSON文件
             if (
@@ -219,7 +221,7 @@ async def eval(
                     rewards_arr=rewards_arr,
                 )
 
-        await _render()
+        _render()
         if hasattr(runner, "eval_envs") and runner.eval_envs is not None:
             runner.eval_envs.close()
         runner.close()
@@ -229,6 +231,7 @@ async def eval(
         # 根据是否是off-policy，选择不同的eval方式
         has_logger = hasattr(runner, "logger")
         if has_logger:
+            runner = cast(OnPolicyMARunner, runner)
             logger: PettingZooMWLogger = runner.logger
             logger.is_testing = (
                 True  # 标识目前在eval；但是eval这个词被它用了，只能用test了。
@@ -237,6 +240,7 @@ async def eval(
             terminate_arr = logger.test_data["terminate_at"]
             angle_arr = logger.test_data["angle_data"]
         else:
+            runner = cast(OffPolicyBaseRunner, runner)
             logger = None
             runner.eval(1)
             terminate_arr = runner.eval_episode_lens
@@ -259,19 +263,34 @@ async def eval(
             runner.eval_envs.close()
         runner.close()
 
+        angle_flatten = [
+            angle for episode_angles in angle_arr for angle in episode_angles
+        ]
+        import numpy as np
+
+        end_time = time.time()
+
         return_result = {
             "desc": f"[{algorithm_name}]<{scenario_name}>_{config.eval_scenario.name}_{_to_dict(config.eval_scenario).get('desc', 'original')}",
             "algo": algorithm_name,
             "variant": scenario_name,
             "scenario": config.eval_scenario.name,
             "terminate_cnt": terminate_cnt,
-            "angle_data": [
-                angle for episode_angles in angle_arr for angle in episode_angles
-            ],
+            "angle_data": angle_flatten,
             "angle_data_grouped": angle_arr,
+            "angle_data_avg": sum(angle_flatten) / len(angle_flatten),
+            "angle_data_std": np.std(angle_flatten),
+            "angle_larger_than_5": sum([1 for angle in angle_flatten if angle > 5])
+            / len(angle_flatten),
+            "angle_larger_than_10": sum([1 for angle in angle_flatten if angle > 10])
+            / len(angle_flatten),
+            "angle_larger_than_15": sum([1 for angle in angle_flatten if angle > 15])
+            / len(angle_flatten),
             "package_x": sum(package_x) / len(package_x),
+            "total_time": end_time - start_time,
+            "total_timesteps": sum(terminate_arr),
+            "avg_terminate_at": sum(terminate_arr) / len(terminate_arr),
         }
-        end_time = time.time()
         print(f"Evaluation time: {end_time - start_time} seconds")
         return return_result
 
@@ -312,9 +331,32 @@ def main(cfg: EvalConfig):
         ],
     )
     # 5. 启动训练
-    result = asyncio.run(eval(cfg))
-    rich.print(result)
+    result = eval(cfg)
+    # 保存结果到JSON文件
+    """
+    将评估结果保存为JSON格式文件
+    根据当前时间创建目录结构并保存结果
+    """
     if result is not None:
+        import json
+        from datetime import datetime
+
+        # 获取当前时间
+        now = datetime.now()
+        mmdd = now.strftime("%m%d")
+        hhmm = now.strftime("%H%M%S")
+
+        # 创建保存路径
+        save_dir = f"./results/runs/{mmdd}/{hhmm}"
+        os.makedirs(save_dir, exist_ok=True)
+
+        # 保存为JSON文件
+        json_path = os.path.join(save_dir, "result.json")
+        with open(json_path, "w", encoding="utf-8") as f:
+            json.dump(result, f, ensure_ascii=False, indent=2)
+
+        print(f"Results saved to: {json_path}")
+
         wandb.log(result)
 
 

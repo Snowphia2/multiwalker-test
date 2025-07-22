@@ -22,8 +22,8 @@ model:
 eval_settings:
   general:
     seed: 42
-    eval_episodes: 1000
-    eval_threads: 50
+    eval_episodes: 10
+    eval_threads: 10
 
   functions:
     # 是否只读取文件，进行数值计算
@@ -31,7 +31,7 @@ eval_settings:
     result_file_name: hi
 
     # 是否渲染
-    render: True
+    render: False
     render_episodes: 1
 
     # 是否进行ablation
