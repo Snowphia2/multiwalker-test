@@ -66,7 +66,7 @@ class PettingZooMWLogger(BaseLogger):
                     self.test_data["terminate_at"].append(eval_infos[i][0]["curr_step"])
                     self.test_data["package_x"].append(eval_infos[i][0]["package_x"])
                     self.test_data["v_deviation"].append(
-                        eval_infos[i][0]["v_deviation"]
+                        eval_infos[i][0].get("v_deviation", 0)
                     )
             for eval_i in range(self.algo_args["eval"]["n_eval_rollout_threads"]):
                 self.one_episode_rewards[eval_i].append(eval_rewards[eval_i])

@@ -55,13 +55,14 @@ class PettingZooMWEnv:
             info[agent]["package_angle"] = self.raw_env.env.package.angle / 3.14 * 180
             info[agent]["curr_step"] = self.cur_step
             info[agent]["package_x"] = self.raw_env.env.package.position.x
-            info[agent]["v_deviation"] = abs(
-                self.raw_env.env.target_v
-                - 0.3
-                * self.raw_env.env.walkers[0].hull.linearVelocity.x
-                * (VIEWPORT_W / SCALE)
-                / FPS
-            )
+            if hasattr(self.raw_env.env, "target_v"):
+                info[agent]["v_deviation"] = abs(
+                    self.raw_env.env.target_v
+                    - 0.3
+                    * self.raw_env.env.walkers[0].hull.linearVelocity.x
+                    * (VIEWPORT_W / SCALE)
+                    / FPS
+                )
             # print("--------------------------------")
             # print(f"v_deviation: {info[agent]['v_deviation']}")
             # print(f"v_x: {self.raw_env.env.walkers[0].hull.linearVelocity.x}")
