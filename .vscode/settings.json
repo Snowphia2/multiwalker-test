@@ -5,7 +5,23 @@
         "**/.svn": true,
         "**/.hg": true,
         "**/CVS": true,
-        "**/.DS_Store": true
+        "**/.DS_Store": true,
+        ".vscode/": true,
+        ".ipynb_checkpoints/": true,
+        ".venv/": true,
+        "**/**.egg-info/": true,
+        "wandb/": true,
+        "**/.ipynb_checkpoints/": true,
+        "**/__pycache__/": true,
+        ".vscodeignore": true,
+        ".pre-commit-config.yaml": true,
+        ".pylintrc": true,
+        ".python-version": true,
+        "setup.py": true,
+        "uv.lock": true,
+        "HARL/examples/": true,
+        "HARL/build/": true,
+        "HARL/assets/": true
     },
-    "hidefiles.selectedProfile": "Show All Files"
+    "hidefiles.selectedProfile": "Default"
 }

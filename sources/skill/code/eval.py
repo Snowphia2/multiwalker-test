@@ -98,7 +98,6 @@ def export_gif(config_name, frames_arr, rewards_arr):
 def eval(
     config: EvalConfig,
 ):
-    start_time = time.time()
     rich.print(f"Evaluation started at {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
 
     # 0. 处理参数
@@ -170,6 +169,7 @@ def eval(
         runner.close()
         # wandb.finish()
 
+    start_time = time.time()
     # 4. render？还是eval？
     if config.eval_settings.functions.render:
 

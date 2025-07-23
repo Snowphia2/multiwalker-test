@@ -2,7 +2,7 @@ name: move
 desc: 变速场景
 
 env_tweak:
-  terrain_config: [{'type': 'flat', 'length': 35}, {'type': 'up', 'length': 6, 'angle': 15}, {'type': 'flat', 'length': 200}]
+  terrain_config: [{'type': 'terrain', 'length': 35}, {'type': 'up', 'length': 6, 'angle': 12}, {'type': 'terrain', 'length': 200}]
 
 disturbances:
   # - name: skill_move_speed

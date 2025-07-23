@@ -1093,9 +1093,31 @@ class MultiWalkerEnv:
                     self.terrain_y.append(y)
                     current_step += 1
 
+            elif segment_type == "terrain":
+                # 随机GRASS地形段，模仿原有GRASS生成逻辑
+                velocity = 0.0
+                for i in range(segment_length):
+                    if current_step >= self.terrain_length:
+                        break
+                    x = current_step * TERRAIN_STEP
+                    # velocity 模仿原始GRASS逻辑
+                    velocity = 0.8 * velocity + 0.01 * np.sign(TERRAIN_HEIGHT - y)
+                    if current_step > TERRAIN_STARTPAD:
+                        velocity += self.np_random.uniform(-1, 1) / SCALE
+                    y += velocity
+                    self.terrain_x.append(x)
+                    self.terrain_y.append(y)
+                    current_step += 1
+
         # 如果还有剩余长度，填充平坦地形
+        velocity = 0.0
         while current_step < self.terrain_length:
             x = current_step * TERRAIN_STEP
+            # velocity 模仿原始GRASS逻辑
+            velocity = 0.8 * velocity + 0.01 * np.sign(TERRAIN_HEIGHT - y)
+            if current_step > TERRAIN_STARTPAD:
+                velocity += self.np_random.uniform(-1, 1) / SCALE
+            y += velocity
             self.terrain_x.append(x)
             self.terrain_y.append(y)
             current_step += 1

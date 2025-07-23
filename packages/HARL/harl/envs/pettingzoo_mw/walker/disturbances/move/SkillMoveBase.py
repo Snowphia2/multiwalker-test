@@ -14,7 +14,6 @@ class SkillMoveBase(DisturbanceBase):
         self.color2 = (255, 0, 0)
 
     def colorize(self, color1: tuple = (255, 0, 0), color2: tuple = (255, 0, 0)):
-        print(f"colorize: {self.disturbance_args}")
         for agent_id in self.disturbance_args.get(
             "effect_on_agent", range(self.env.n_walkers)
         ):
