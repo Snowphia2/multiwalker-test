@@ -36,7 +36,6 @@ def _to_harl_dict(
     ) = _train_to_harl_dict(cfg)
 
     rich.print(algo_dict)
-    algo_dict["logger"]["log_dir"] = f"./results/models/logs/{save_group}"
 
     if cfg.eval_scenario.env_tweak is not None:
         eval_env_tweak = _to_dict(cfg.eval_scenario.env_tweak)
@@ -124,14 +123,16 @@ def eval(
     model_path = f"./results/models/{save_group}/{env_name}/{env_folder}/{algorithm_name}/[{algorithm_name}]<{scenario_name}>"
     rich.print(f"Loading model from {model_path}")
 
+    # 2. 通用的env_tweak方法
     name_suffix = ""
     rich.print(config.environment.env_tweak.tweak_types)
     tweak_types = config.environment.env_tweak.tweak_types
     if env_name == "pettingzoo_mw":
         tweak_types = ["n_walkers", *sorted(config.environment.env_tweak.tweak_types)]
+    env_tweaks = _to_dict(config.environment.env_tweak)
     for key in tweak_types:
         if not key.startswith("_"):
-            name_suffix += f"<{key}={config.environment.env_tweak[key]}>"
+            name_suffix += f"<{key}={env_tweaks.get(key, None)}>"
     model_path += name_suffix
 
     seed_folder = next(
@@ -145,7 +146,8 @@ def eval(
     def _modify_algo_and_env_dict():
         algo_dict["train"]["model_dir"] = checkpoint_path  # 模型位置
 
-        algo_dict["eval"]["n_eval_rollout_threads"] = (  # eval thread
+        # eval thread
+        algo_dict["eval"]["n_eval_rollout_threads"] = (
             config.eval_settings.general.eval_threads
         )
         algo_dict["eval"]["eval_episodes"] = config.eval_settings.general.eval_episodes
@@ -155,6 +157,10 @@ def eval(
         algo_dict["render"]["render_episodes"] = (
             config.eval_settings.functions.render_episodes
         )
+
+        # logger
+        algo_dict["logger"]["log_dir"] = f"./results/logs/{save_group}"
+
         # FIXME: 为什么需要这个？
         if (
             env_name == "pettingzoo_mw" or env_name == "pettingzoo_mw_llm"

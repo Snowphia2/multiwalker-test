@@ -1,6 +1,5 @@
 {
     "exclude": ["wandb","results"],
-    "typeCheckingMode": "basic",
     "reportUnknownVariableType": false,
     "reportUnknownMemberType": false,
     "reportMissingTypeStubs": false,
