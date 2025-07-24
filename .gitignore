@@ -434,3 +434,5 @@ src/runs/reproduce/**
 sources/llm
 
 !results/models/.gitkeep
+
+*.pdf

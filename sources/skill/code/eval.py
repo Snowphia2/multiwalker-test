@@ -36,6 +36,7 @@ def _to_harl_dict(
     ) = _train_to_harl_dict(cfg)
 
     rich.print(algo_dict)
+    algo_dict["logger"]["log_dir"] = f"./results/models/logs/{save_group}"
 
     if cfg.eval_scenario.env_tweak is not None:
         eval_env_tweak = _to_dict(cfg.eval_scenario.env_tweak)
