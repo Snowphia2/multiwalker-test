@@ -18,7 +18,6 @@ from pettingzoo.utils.conversions import aec_to_parallel_wrapper
 from ..harl_env_with_events import (
     HarlEnvWithEvents,
     Event,
-    ActionAvailableType,
     AllAgentActionAvailableType,
 )
 
@@ -72,16 +71,15 @@ class PettingZooMWEnv(
     max_cycles: int
     discrete: bool
     n_agents: int
-    share_observation_space: list[gym.Space[np.float32]]
-    observation_space: list[gym.Space[np.float32]]
-    action_space: list[gym.Space[np.float32]]
+    share_observation_space: list[gym.spaces.Box]
+    observation_space: list[gym.spaces.Box]
+    action_space: list[Union[gym.spaces.Box, gym.spaces.Discrete]]
     cur_step: int
     agents: list[TAgentId]
     env: TEnv
     args: TArgs
 
     def __init__(self, args):
-        super().__init__(args)
         self.args = copy.deepcopy(args)
         self.discrete = False
         if "max_cycles" in self.args:
@@ -112,6 +110,7 @@ class PettingZooMWEnv(
         self.action_space = self.unwrap(
             {agent: self.env.action_space(agent) for agent in self.agents}
         )
+        super().__init__(args)
 
     @override
     def step(
@@ -200,10 +199,6 @@ class PettingZooMWEnv(
         s_obs = self.repeat(self.env.state())
         return obs, s_obs, self.get_avail_actions()
 
-    def get_avail_agent_actions(self, agent_idx: int) -> ActionAvailableType:
-        """Returns the available actions for agent_id"""
-        return [1] * self.action_space[agent_idx].n  # type: ignore
-
     @override
     def render(self) -> Union[np.ndarray[Any, np.dtype[np.uint8]], None]:
         render_result = self.raw_env.render()
@@ -212,3 +207,8 @@ class PettingZooMWEnv(
     @override
     def close(self):
         self.env.close()
+
+    @override
+    def seed(self, seed: int) -> None:
+        self._seed = seed
+        _ = self.env.reset(seed=self._seed)

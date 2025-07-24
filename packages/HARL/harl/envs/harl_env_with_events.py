@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Generic, Literal, Protocol, TypeVar, Union, Any
+from typing import Generic, Literal, Protocol, TypeVar, Union, Any, cast
 
 import gymnasium as gym
 import numpy as np
@@ -44,7 +44,9 @@ class Event:
 class EnvProtocol(Protocol):
     def reset(self, *args, **kwargs) -> Any: ...
     def step(self, *args, **kwargs) -> Any: ...
-    def close(self, *args, **kwargs) -> Any: ...
+    def close(self) -> None: ...
+    def state(self) -> Any: ...
+    def render(self, *args, **kwargs) -> Any: ...
 
 
 TEnv = TypeVar("TEnv", bound=EnvProtocol)
@@ -52,11 +54,11 @@ TEnv = TypeVar("TEnv", bound=EnvProtocol)
 TAgentId = TypeVar("TAgentId")
 TArgs = TypeVar("TArgs")
 T = TypeVar("T")
-ObsType = TypeVar("ObsType", covariant=True)
-ActionType = TypeVar("ActionType")
+ObsType = TypeVar("ObsType")
+ActionType = TypeVar("ActionType", contravariant=True)
 StateType = TypeVar("StateType")
 
-ActionAvailableType = list[bool]
+ActionAvailableType = list[int]
 AllAgentActionAvailableType = list[ActionAvailableType]
 
 
@@ -67,13 +69,14 @@ class HarlEnvWithEvents(
     max_cycles: int
     discrete: bool
     n_agents: int
-    share_observation_space: list[gym.Space[np.float32]]
-    observation_space: list[gym.Space[np.float32]]
-    action_space: list[gym.Space[np.float32]]
+    share_observation_space: list[gym.spaces.Box]
+    observation_space: list[gym.spaces.Box]
+    action_space: list[Union[gym.spaces.Box, gym.spaces.Discrete]]
     cur_step: int
     agents: list[TAgentId]
     env: TEnv
     args: TArgs
+    _seed: int
 
     def __init__(self, args):
         # 检查子类是否设置了 self.n_agents
@@ -143,17 +146,22 @@ class HarlEnvWithEvents(
 
     def get_avail_agent_actions(self, agent_idx: int) -> ActionAvailableType:
         # Same for everyone: return [1] * self.action_space[agent_id].n
-        raise NotImplementedError(
-            "[GetAvailAgentActions] Should be implemented by subclass"
-        )
+        if isinstance(self.action_space[agent_idx], gym.spaces.Discrete):
+            space = cast(gym.spaces.Discrete, self.action_space[agent_idx])
+            action_a = space.n
+            return [1] * action_a
+        else:
+            space = cast(gym.spaces.Box, self.action_space[agent_idx])
+            assert space.shape is not None
+            return [1] * space.shape[0]
 
     def get_events(self) -> list[Event]:
         return self.events
 
-    def start_event(self, event: Event):
+    def start_event(self, event: Event) -> None:
         raise NotImplementedError("[StartEvent] Should be implemented by subclass")
 
-    def stop_event(self, event: Event):
+    def stop_event(self, event: Event) -> None:
         raise NotImplementedError("[StopEvent] Should be implemented by subclass")
 
     def wrap(self, lam: list[T]) -> dict[TAgentId, T]:
@@ -171,6 +179,5 @@ class HarlEnvWithEvents(
     def repeat(self, a: T) -> list[T]:
         return [a for _ in range(self.n_agents)]
 
-    def seed(self, seed):
-        self._seed = seed
-        self.env.reset(seed=self._seed)
+    def seed(self, seed: int) -> None:
+        raise NotImplementedError("[Seed] Should be implemented by subclass")

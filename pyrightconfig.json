@@ -3,4 +3,6 @@
     "reportUnknownVariableType": false,
     "reportUnknownMemberType": false,
     "reportMissingTypeStubs": false,
+    "reportExplicitAny": false,
+    "typeCheckingMode": "standard"
 }

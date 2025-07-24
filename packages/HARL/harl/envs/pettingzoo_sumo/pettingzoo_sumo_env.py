@@ -2,13 +2,25 @@ import copy
 import logging
 
 from dataclasses import asdict, dataclass
-from typing import Optional, Union, cast
+from typing import Any, Optional, Union, cast
+from typing_extensions import override
 from gymnasium import spaces
 from pettingzoo.utils import wrappers
 from pettingzoo.utils.conversions import parallel_wrapper_fn
 
+from pettingzoo.utils.conversions import aec_to_parallel_wrapper
 import sumo_rl
 import numpy as np
+
+import gymnasium as gym
+
+# from pettingzoo.sisl import multiwalker_v9
+from ..harl_env_with_events import (
+    HarlEnvWithEvents,
+    Event,
+)
+
+# from pettingzoo.sisl import multiwalker_v9
 
 logging.basicConfig()
 logging.getLogger().setLevel(logging.ERROR)
@@ -87,7 +99,36 @@ class SumoEnvConfig:
     render_mode: Optional[str] = None
 
 
-class PettingZooSumoEnv:
+ActionType = np.ndarray[Any, np.dtype[np.int32]]
+ObsType = np.ndarray[Any, np.dtype[Union[np.float32, np.int32]]]
+StateType = np.ndarray[Any, np.dtype[Union[np.float32, np.int32]]]
+
+
+TAgentId = str
+TEnv = aec_to_parallel_wrapper[str, ObsType, ActionType]
+TArgs = dict[str, Any]
+TDeepDict = dict[TAgentId, dict[str, Any]]
+ObsWrappedType = dict[TAgentId, ObsType]
+
+
+class PettingZooSumoEnv(
+    HarlEnvWithEvents[
+        str,
+        SumoEnvironmentPZWithGlobalState,
+        SumoEnvConfig,
+        ObsType,
+        ActionType,
+        StateType,
+    ]
+):
+    events: list[Event]
+    n_agents: int
+    share_observation_space: list[gym.spaces.Box]
+    observation_space: list[gym.spaces.Box]
+    action_space: list[Union[gym.spaces.Box, gym.spaces.Discrete]]
+    agents: list[TAgentId]
+    _seed: int
+
     def __init__(self, args: SumoEnvConfig):
         self.args: SumoEnvConfig = copy.deepcopy(args)
 
@@ -112,21 +153,22 @@ class PettingZooSumoEnv:
         self.agents = self.env.agents
 
         # 如果是dict, unwrap
-        self.observation_space = self.unwrap(self.env.observation_spaces)
-        self.action_space = self.unwrap(self.env.action_spaces)
+        self.observation_space = self.unwrap(self.env.observation_spaces)  # type: ignore
+        self.action_space = self.unwrap(self.env.action_spaces)  # type: ignore
         self.share_observation_space = self.repeat(self.env.state_space)
         self._seed = 0
         self.cur_step = 0
+        super().__init__(args)
 
     @property
-    def global_state(self):
+    def global_state(self) -> StateType:
         return self.env.state()
 
     def step(self, actions):
         """
         return local_obs, global_state, rewards, dones, infos, available_actions
         """
-        actions_wrapped = self.wrap(actions.flatten())
+        actions_wrapped = self.wrap(actions.flatten().tolist())
         obs, rew, term, trunc, info = self.env.step(actions_wrapped)  # type: ignore
         # 这里的析构是aec_to_parallel_wrapper负责的
 
@@ -136,9 +178,9 @@ class PettingZooSumoEnv:
             for agent in self.agents:
                 info[agent]["bad_transition"] = True
         dones = {agent: term[agent] or trunc[agent] for agent in self.agents}
-        global_state = self.repeat(self.env.state())
-        total_reward = sum([rew[agent] for agent in self.agents])
-        rewards = [[total_reward]] * self.n_agents
+        global_state = self.repeat(self.global_state)
+        total_reward: float = sum([rew[agent] for agent in self.agents])
+        rewards: list[list[float]] = [[total_reward]] * self.n_agents
         return (
             self.unwrap(obs),
             global_state,
@@ -148,48 +190,24 @@ class PettingZooSumoEnv:
             self.get_avail_actions(),
         )
 
+    @override
     def reset(self):
         """重置环境并返回初始观测和状态"""
         self._seed += 1
         self.cur_step = 0
         obs, infos = self.env.reset(seed=self._seed)  # type: ignore
         obs = self.unwrap(obs)
-        s_obs = self.repeat(self.env.state())
-        avail_actions = self.get_avail_actions()
+        s_obs = self.repeat(self.global_state)
+        return obs, s_obs, self.get_avail_actions()
 
-        obs_n = np.array(obs)
-        s_obs_n = np.array(s_obs)
-        avail_actions_n = np.array(avail_actions)
-        return obs_n, s_obs_n, avail_actions_n
-
-    def get_avail_actions(self):
-        if self.discrete:
-            avail_actions = []
-            for agent_id in range(self.n_agents):
-                avail_agent = self.get_avail_agent_actions(agent_id)
-                avail_actions.append(avail_agent)
-            return avail_actions
-        else:
-            return None
-
-    def get_avail_agent_actions(self, agent_id):
-        """Returns the available actions for agent_id"""
-        return [1] * self.action_space[agent_id].n
-
-    def render(self):
+    @override
+    def render(self) -> None:
         self.env.render()
 
-    def close(self):
+    @override
+    def close(self) -> None:
         self.env.close()
 
-    def seed(self, seed):
+    @override
+    def seed(self, seed: int) -> None:
         self._seed = seed
-
-    def wrap(self, target):
-        return {agent: target[i] for i, agent in enumerate(self.agents)}
-
-    def unwrap(self, target):
-        return [target[agent] for agent in self.agents]
-
-    def repeat(self, a):
-        return [a for _ in range(self.n_agents)]
