@@ -36,6 +36,8 @@ dependencies = [
   "harl",
   "sumo_rl",
   "mapdn",
+  "seaborn>=0.13.2",
+  "ray[rllib]==2.7.0",
 ]
 [tool.uv.sources]
 harl = { workspace = true }

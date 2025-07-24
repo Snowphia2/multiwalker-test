@@ -59,6 +59,7 @@ def sumo_customize_dict(cfg, algo_dict: dict, env_dict: dict, save_group: str):
         algo_dict["train"]["episode_length"] = max_cycles - 1
 
     env_dict["out_csv_name"] = f"{env_dict['out_csv_name']}/{save_group}/log"
+    print(f"env_dict['out_csv_name'] = {env_dict['out_csv_name']}")
     return algo_dict, env_dict
 
 

@@ -7,10 +7,7 @@ if "SUMO_HOME" in os.environ:
     sys.path.append(tools)
 else:
     sys.exit("Please declare the environment variable 'SUMO_HOME'")
-import numpy as np
-import pandas as pd
 import ray
-import traci
 from ray import tune
 from ray.rllib.algorithms.ppo import PPOConfig
 from ray.rllib.env.wrappers.pettingzoo_env import ParallelPettingZooEnv
@@ -36,9 +33,9 @@ if __name__ == "__main__":
         env_name,
         lambda _: ParallelPettingZooEnv(
             sumo_rl.parallel_env(
-                net_file="sumo_rl/nets/4x4-Lucas/4x4.net.xml",
-                route_file="sumo_rl/nets/4x4-Lucas/4x4c1c2c1c2.rou.xml",
-                out_csv_name="outputs/4x4grid/ppo",
+                net_file="packages/SUMO/sumo_rl/nets/4x4-Lucas/4x4.net.xml",
+                route_file="packages/SUMO/sumo_rl/nets/4x4-Lucas/4x4c1c2c1c2.rou.xml",
+                out_csv_name="outputs/sumo/4x4grid/ppo",
                 use_gui=False,
                 num_seconds=80000,
             )
@@ -72,6 +69,6 @@ if __name__ == "__main__":
         name="PPO",
         stop={"timesteps_total": 100000},
         checkpoint_freq=10,
-        local_dir="~/ray_results/" + env_name,
+        local_dir="/results/ray_results/" + env_name,
         config=config.to_dict(),
     )

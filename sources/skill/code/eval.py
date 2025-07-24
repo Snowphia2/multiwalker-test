@@ -113,12 +113,22 @@ def eval(
     ) = _to_harl_dict(config)
 
     # 1. 加载模型
-    model_path = f"./results/models/{save_group}/{env_name}/multiwalker/{algorithm_name}/[{algorithm_name}]<{scenario_name}>"
+    env_folder = ""
+    if env_name == "pettingzoo_mw":
+        env_folder = "multiwalker"
+    elif env_name == "pettingzoo_mw_llm":
+        env_folder = "multiwalker"
+    elif env_name == "pettingzoo_sumo":
+        env_folder = "sumo"
+    model_path = f"./results/models/{save_group}/{env_name}/{env_folder}/{algorithm_name}/[{algorithm_name}]<{scenario_name}>"
     rich.print(f"Loading model from {model_path}")
 
     name_suffix = ""
     rich.print(config.environment.env_tweak.tweak_types)
-    for key in ["n_walkers", *sorted(config.environment.env_tweak.tweak_types)]:
+    tweak_types = config.environment.env_tweak.tweak_types
+    if env_name == "pettingzoo_mw":
+        tweak_types = ["n_walkers", *sorted(config.environment.env_tweak.tweak_types)]
+    for key in tweak_types:
         if not key.startswith("_"):
             name_suffix += f"<{key}={config.environment.env_tweak[key]}>"
     model_path += name_suffix
@@ -151,10 +161,11 @@ def eval(
             algo_dict["train"]["num_env_steps"] = 1  # FIXME: ???
 
         # disturbances的引入
-        env_dict["custom"]["is_eval"] = True
-        env_dict["custom"]["eval_disturb"] = _to_dict(config.eval_scenario).get(
-            "disturbances", []
-        )
+        if env_name == "pettingzoo_mw" or env_name == "pettingzoo_mw_llm":
+            env_dict["custom"]["is_eval"] = True
+            env_dict["custom"]["eval_disturb"] = _to_dict(config.eval_scenario).get(
+                "disturbances", []
+            )
 
     _modify_algo_and_env_dict()
 
@@ -237,6 +248,8 @@ def eval(
                 True  # 标识目前在eval；但是eval这个词被它用了，只能用test了。
             )
             runner.eval()
+            assert runner.eval_envs is not None
+            runner.eval_envs.reset()
             terminate_arr = logger.test_data["terminate_at"]
             angle_arr = logger.test_data["angle_data"]
         else:

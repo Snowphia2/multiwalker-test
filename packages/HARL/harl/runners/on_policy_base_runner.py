@@ -176,6 +176,7 @@ class OnPolicyBaseRunner:
 
     def run(self):
         """Run the training (or rendering) pipeline."""
+        assert self.eval_envs is not None
         if self.algo_args["render"]["use_render"] is True:
             self.render()
             return
@@ -517,6 +518,7 @@ class OnPolicyBaseRunner:
     @torch.no_grad()
     def eval(self):
         """Evaluate the model."""
+        assert self.eval_envs is not None
         self.logger.eval_init()  # logger callback at the beginning of evaluation
         eval_episode = 0
 
@@ -553,6 +555,7 @@ class OnPolicyBaseRunner:
 
             eval_actions = np.array(eval_actions_collector).transpose(1, 0, 2)
 
+            assert self.eval_envs is not None
             (
                 eval_obs,
                 eval_share_obs,

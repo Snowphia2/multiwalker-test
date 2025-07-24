@@ -271,6 +271,8 @@ class SumoEnvironment(gym.Env):
         """Reset the environment."""
         super().reset(seed=seed, **kwargs)
 
+        print(f"reset {self.episode}")
+
         if self.episode != 0:
             self.close()
             self.save_csv(self.out_csv_name, self.episode)
@@ -533,44 +535,44 @@ class SumoEnvironment(gym.Env):
             )
 
             # 记录到wandb
-            # try:
-            #     import wandb
+            try:
+                import wandb
 
-            #     if wandb.run is not None:
-            #         # 计算episode的平均指标
-            #         if len(self.metrics) > 0:
-            #             episode_metrics = {}
-            #             for key in self.metrics[0].keys():
-            #                 if key.startswith("system_") or key.startswith("agents_"):
-            #                     values = [
-            #                         metric[key]
-            #                         for metric in self.metrics
-            #                         if key in metric
-            #                     ]
-            #                     if values:
-            #                         episode_metrics[f"episode_{key}"] = np.mean(values)
+                if wandb.run is not None:
+                    # 计算episode的平均指标
+                    if len(self.metrics) > 0:
+                        episode_metrics = {}
+                        for key in self.metrics[0].keys():
+                            if key.startswith("system_") or key.startswith("agents_"):
+                                values = [
+                                    metric[key]
+                                    for metric in self.metrics
+                                    if key in metric
+                                ]
+                                if values:
+                                    episode_metrics[f"episode_{key}"] = np.mean(values)
 
-            #             # 添加episode信息
-            #             episode_metrics["episode"] = episode
-            #             episode_metrics["connection_id"] = self.label
+                        # 添加episode信息
+                        episode_metrics["episode"] = episode
+                        episode_metrics["connection_id"] = self.label
 
-            #             # 记录到wandb
-            #             wandb.log(episode_metrics, step=episode)
+                        # 记录到wandb
+                        wandb.log(episode_metrics, step=episode)
 
-            #             # 可选：记录完整的metrics表格
-            #             if len(self.metrics) > 1:
-            #                 wandb.log(
-            #                     {
-            #                         f"metrics_table_ep{episode}": wandb.Table(
-            #                             dataframe=df
-            #                         )
-            #                     },
-            #                     step=episode,
-            #                 )
-            # except ImportError:
-            #     print("警告: wandb未安装，跳过wandb日志记录")
-            # except Exception as e:
-            #     print(f"警告: wandb日志记录失败: {e}")
+                        # 可选：记录完整的metrics表格
+                        if len(self.metrics) > 1:
+                            wandb.log(
+                                {
+                                    f"metrics_table_ep{episode}": wandb.Table(
+                                        dataframe=df
+                                    )
+                                },
+                                step=episode,
+                            )
+            except ImportError:
+                print("警告: wandb未安装，跳过wandb日志记录")
+            except Exception as e:
+                print(f"警告: wandb日志记录失败: {e}")
 
     # Below functions are for discrete state space
 
