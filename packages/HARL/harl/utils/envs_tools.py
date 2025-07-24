@@ -5,6 +5,7 @@ import random
 import numpy as np
 import torch
 from harl.envs.env_wrappers import ShareSubprocVecEnv, ShareDummyVecEnv
+from dacite import from_dict
 
 
 def check(value):
@@ -107,7 +108,7 @@ def make_train_env(env_name, seed, n_threads, env_args):
 
                 from harl.envs.pettingzoo_sumo.pettingzoo_sumo_env import SumoEnvConfig
 
-                env_args1 = SumoEnvConfig(**env_args)
+                env_args1 = from_dict(SumoEnvConfig, env_args)
                 print("env_args1")
                 print(env_args1)
 
@@ -185,7 +186,7 @@ def make_eval_env(env_name, seed, n_threads, env_args):
 
                 from harl.envs.pettingzoo_sumo.pettingzoo_sumo_env import SumoEnvConfig
 
-                env_args1 = SumoEnvConfig(**env_args)
+                env_args1 = from_dict(SumoEnvConfig, env_args)
 
                 env = PettingZooSumoEnv(env_args1)
             elif env_name == "pettingzoo_mw_llm":

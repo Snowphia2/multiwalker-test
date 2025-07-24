@@ -1,13 +1,11 @@
 import copy
 import logging
 
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, field
 from typing import Any, Optional, Union, cast
-from typing_extensions import override
 from gymnasium import spaces
 from pettingzoo.utils import wrappers
 from pettingzoo.utils.conversions import parallel_wrapper_fn
-
 from pettingzoo.utils.conversions import aec_to_parallel_wrapper
 import sumo_rl
 import numpy as np
@@ -73,7 +71,7 @@ class SumoEnvConfig:
     route_file: str
     out_csv_name: Optional[str] = None
     use_gui: bool = False
-    virtual_display: tuple[int, int] = (3200, 1800)
+    virtual_display: list[int] = field(default_factory=lambda: [3200, 1800])
     begin_time: int = 0
     num_seconds: int = 20000
     max_depart_delay: int = -1
@@ -97,6 +95,8 @@ class SumoEnvConfig:
     sumo_warnings: bool = True
     additional_sumo_cmd: Optional[str] = None
     render_mode: Optional[str] = None
+
+    events: Optional[list[Event]] = None
 
 
 ActionType = np.ndarray[Any, np.dtype[np.int32]]
@@ -142,7 +142,9 @@ class PettingZooSumoEnv(
         self.cur_step: int = 0
 
         dict_args = asdict(args)
+        dict_args["virtual_display"] = tuple(dict_args["virtual_display"])
         del dict_args["observation_class"]
+        del dict_args["events"]
         self.env: SumoEnvironmentPZWithGlobalState = cast(
             SumoEnvironmentPZWithGlobalState,
             parallel_env(**dict_args, observation_class=args.observation_class),
@@ -158,7 +160,20 @@ class PettingZooSumoEnv(
         self.share_observation_space = self.repeat(self.env.state_space)
         self._seed = 0
         self.cur_step = 0
+
+        # events
+        if args.events is not None:
+            self._init_event_mapping()
+            self._init_event(args.events)
+
         super().__init__(args)
+
+    def _init_event_mapping(self) -> None:
+        from .events.lane_closed import LaneCloseEventManager
+
+        self.event_mapping = {
+            "lane_closed": LaneCloseEventManager,
+        }
 
     @property
     def global_state(self) -> StateType:
@@ -181,6 +196,7 @@ class PettingZooSumoEnv(
         global_state = self.repeat(self.global_state)
         total_reward: float = sum([rew[agent] for agent in self.agents])
         rewards: list[list[float]] = [[total_reward]] * self.n_agents
+        self.trigger_event()
         return (
             self.unwrap(obs),
             global_state,
@@ -190,7 +206,6 @@ class PettingZooSumoEnv(
             self.get_avail_actions(),
         )
 
-    @override
     def reset(self):
         """重置环境并返回初始观测和状态"""
         self._seed += 1
@@ -200,14 +215,11 @@ class PettingZooSumoEnv(
         s_obs = self.repeat(self.global_state)
         return obs, s_obs, self.get_avail_actions()
 
-    @override
     def render(self) -> None:
         self.env.render()
 
-    @override
     def close(self) -> None:
         self.env.close()
 
-    @override
     def seed(self, seed: int) -> None:
         self._seed = seed

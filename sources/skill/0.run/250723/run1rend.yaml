@@ -19,6 +19,7 @@ steps:
     config_name: sumo
     args:
       - ++environment.env_tweak.tweak_types=[]
+      - eval_scenario=sumo/lane_closed
 hydra:
   searchpath: 
     - file://sources/skill/0.run

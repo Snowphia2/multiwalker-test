@@ -2,10 +2,11 @@ from harl.envs.pettingzoo_sumo.pettingzoo_sumo_env import SumoEnvConfig
 from dataclasses import dataclass, field
 from typing import Optional, List, Union, cast
 import omegaconf
+from harl.envs.harl_env_with_events import Event
 
 
 @dataclass
-class SumoTweakConfig(SumoEnvConfig):
+class SumoTweakConfig:
     tweak_types: List[str] = field(default_factory=list)
 
     net_file: Optional[str] = None
@@ -38,6 +39,7 @@ class SumoTweakConfig(SumoEnvConfig):
 @dataclass
 class SumoEvalScenarioConfig:
     name: str
+    events: Optional[list[Event]] = None
 
 
 def _to_dict(cfg1) -> dict:

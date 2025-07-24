@@ -37,12 +37,18 @@ def _to_harl_dict(
 
     rich.print(algo_dict)
 
-    if cfg.eval_scenario.env_tweak is not None:
+    if (
+        hasattr(cfg.eval_scenario, "env_tweak")
+        and cfg.eval_scenario.env_tweak is not None
+    ):
         eval_env_tweak = _to_dict(cfg.eval_scenario.env_tweak)
         for key in eval_env_tweak.keys():
             if not key.startswith("_") and key != "tweak_types":
                 env_dict[key] = eval_env_tweak[key]
                 print(f"eval_env_tweak: {key} = {eval_env_tweak[key]}")
+
+    if hasattr(cfg.eval_scenario, "events") and cfg.eval_scenario.events is not None:
+        env_dict["events"] = _to_dict(cfg.eval_scenario)["events"]
 
     return (
         algo_dict,

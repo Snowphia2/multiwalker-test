@@ -1,7 +1,8 @@
 from dataclasses import dataclass
 from ..environment.type_multiwalker import MultiWalkerTweakConfig
 from .train_type import TrainConfig
-from typing import Any, Optional, List
+from typing import Any, Optional, List, Union
+from harl.envs.harl_env_with_events import Event
 
 
 @dataclass
@@ -51,6 +52,7 @@ class EvalScenarioConfig:
     is_raw: Optional[bool] = False
     env_tweak: Optional[MultiWalkerTweakConfig] = None
     disturbances: Optional[List[DisturbanceConfig]] = None
+    events: Union[List[Event], None] = None
 
 
 @dataclass

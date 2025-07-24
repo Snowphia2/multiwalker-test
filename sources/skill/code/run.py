@@ -114,7 +114,7 @@ def main(config: HydraRunConfig):
 
     commands = []
     commands += [_from_step_to_command(step) for step in config.steps]
-    rich.print(commands)
+    print(commands)
 
     # 保存命令供复现
     sh_reproduce = "\n".join(commands)

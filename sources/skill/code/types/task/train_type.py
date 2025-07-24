@@ -11,6 +11,14 @@ from ..environment.type_sumo import (
     SumoEnvConfig,
     SumoEvalScenarioConfig,
 )
+from harl.envs.harl_env_with_events import Event
+
+
+@dataclass
+class EvalScenarioConfig:
+    name: str
+    desc: str
+    events: Optional[list[Event]] = None
 
 
 EnvConfigType = Union[MultiWalkerConfig, SumoEnvConfig]

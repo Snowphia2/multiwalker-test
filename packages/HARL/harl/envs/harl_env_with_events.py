@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 from typing import Generic, Literal, Protocol, TypeVar, Union, Any, cast
-
+from abc import ABC, abstractmethod
 import gymnasium as gym
 import numpy as np
 
@@ -8,7 +8,7 @@ import numpy as np
 @dataclass
 class EventData_GivenValue:
     type: Literal["given"]
-    given_value: float
+    given_value: dict[str, Any]
 
 
 @dataclass
@@ -30,15 +30,29 @@ class GivenTimestepsTriggerArgs:
 class RandomTriggerArgs:
     trigger_frequency: float
     event_value: Union[EventData_GivenValue, EventData_RandomValue]
+    duration: int
 
 
 @dataclass
 class Event:
     event_id: str
     should_trigger_by_given_timestep: bool
-    given_timestep_trigger_args: GivenTimestepsTriggerArgs
+    given_timestep_trigger_args: Union[GivenTimestepsTriggerArgs, None]
     should_trigger_by_random: bool
-    random_trigger_args: RandomTriggerArgs
+    random_trigger_args: Union[RandomTriggerArgs, None]
+
+    def __post_init__(self):
+        if (
+            self.should_trigger_by_given_timestep
+            and self.given_timestep_trigger_args is None
+        ):
+            raise ValueError(
+                "given_timestep_trigger_args must be provided when should_trigger_by_given_timestep is true"
+            )
+        if self.should_trigger_by_random and self.random_trigger_args is None:
+            raise ValueError(
+                "random_trigger_args must be provided when should_trigger_by_random is true"
+            )
 
 
 class EnvProtocol(Protocol):
@@ -62,10 +76,88 @@ ActionAvailableType = list[int]
 AllAgentActionAvailableType = list[ActionAvailableType]
 
 
+@dataclass
+class EventStatus:
+    is_active: bool
+    started_at: int
+    stopped_at: int
+    args: Union[EventData_GivenValue, EventData_RandomValue, None]
+
+
+class EventManager(ABC):
+    event_config: Event
+    event_status: EventStatus
+    original_backup: Any
+
+    def __init__(self, event_config: Event, event_status: EventStatus):
+        self.event_config = event_config
+        self.event_status = event_status
+
+    @abstractmethod
+    def _event_random_value(self) -> Any:
+        pass
+
+    @abstractmethod
+    def _event_start(self, args: Any) -> None:
+        """
+        从_get_event_args_value()里获取值！
+        """
+        pass
+
+    @abstractmethod
+    def _event_stop(self) -> None:
+        pass
+
+    def _get_event_args_value(self) -> Any:
+        if self.event_status.args is None:
+            raise ValueError("args must be provided to be triggered")
+        if self.event_status.args.type == "given":
+            return self.event_status.args.given_value
+        elif self.event_status.args.type == "random":
+            return self._event_random_value()
+
+    def start(self, cur_step: int) -> None:
+        event_status = self.event_status
+        event = self.event_config
+        if event_status.is_active:
+            print(f"Event {event.event_id} is already active")
+            return
+        event_status.is_active = True
+        event_status.started_at = cur_step
+        if event.should_trigger_by_given_timestep:
+            # 不同的event，random args的处理都不一样，这里最好就当二传手吧
+            assert event.given_timestep_trigger_args is not None, (
+                "given_timestep_trigger_args must be provided to be triggered"
+            )
+            if event.given_timestep_trigger_args.event_value.type == "given":
+                event_status.args = event.given_timestep_trigger_args.event_value
+            elif event.given_timestep_trigger_args.event_value.type == "random":
+                event_status.args = event.given_timestep_trigger_args.event_value
+            event_status.stopped_at = event.given_timestep_trigger_args.stop_at_timestep
+        elif event.should_trigger_by_random:
+            assert event.random_trigger_args is not None, (
+                "random_trigger_args must be provided to be triggered"
+            )
+            if event.random_trigger_args.event_value.type == "given":
+                event_status.args = event.random_trigger_args.event_value
+            elif event.random_trigger_args.event_value.type == "random":
+                event_status.args = event.random_trigger_args.event_value
+            event_status.stopped_at = cur_step + event.random_trigger_args.duration
+        assert event_status.args is not None, "args must be provided to be triggered"
+
+        self._event_start(self._get_event_args_value())
+
+    def stop(self) -> None:
+        self._event_stop()
+
+
 class HarlEnvWithEvents(
-    Generic[TAgentId, TEnv, TArgs, ObsType, ActionType, StateType], Protocol
+    Generic[TAgentId, TEnv, TArgs, ObsType, ActionType, StateType], ABC
 ):
     events: list[Event]
+    event_managers: list[EventManager]
+    event_mapping: dict[str, type[EventManager]]
+
     max_cycles: int
     discrete: bool
     n_agents: int
@@ -99,6 +191,7 @@ class HarlEnvWithEvents(
         _ = self.reset()
         self.cur_step = 0
 
+    @abstractmethod
     def step(
         self, actions: ActionType
     ) -> tuple[
@@ -109,30 +202,23 @@ class HarlEnvWithEvents(
         list[dict[str, Any]],
         Union[AllAgentActionAvailableType, None],
     ]:
-        raise NotImplementedError("[Step] Should be implemented by subclass")
+        pass
 
+    @abstractmethod
     def reset(
         self,
     ) -> tuple[
         list[ObsType], list[StateType], Union[AllAgentActionAvailableType, None]
     ]:
-        raise NotImplementedError("[Reset] Should be implemented by subclass")
+        pass
 
+    @abstractmethod
     def close(self) -> None:
-        self.env.close()
-        raise NotImplementedError("[Close] Should be implemented by subclass")
+        pass
 
+    @abstractmethod
     def render(self) -> Union[np.ndarray[Any, np.dtype[np.uint8]], None]:
-        """
-        渲染环境并返回RGB图像（如支持），否则返回None。
-
-        Returns:
-            np.ndarray: 形状为(H, W, 3)的uint8类型RGB图像，或None。
-        Raises:
-            NotImplementedError: 如果子类未实现渲染方法。
-        """
-        # 默认抛出异常，子类应实现具体渲染逻辑
-        raise NotImplementedError("[Render] Should be implemented by subclass")
+        pass
 
     def get_avail_actions(self) -> Union[AllAgentActionAvailableType, None]:
         if self.discrete:
@@ -155,15 +241,6 @@ class HarlEnvWithEvents(
             assert space.shape is not None
             return [1] * space.shape[0]
 
-    def get_events(self) -> list[Event]:
-        return self.events
-
-    def start_event(self, event: Event) -> None:
-        raise NotImplementedError("[StartEvent] Should be implemented by subclass")
-
-    def stop_event(self, event: Event) -> None:
-        raise NotImplementedError("[StopEvent] Should be implemented by subclass")
-
     def wrap(self, lam: list[T]) -> dict[TAgentId, T]:
         d = {}
         for i, agent in enumerate(self.agents):
@@ -179,5 +256,64 @@ class HarlEnvWithEvents(
     def repeat(self, a: T) -> list[T]:
         return [a for _ in range(self.n_agents)]
 
+    @abstractmethod
     def seed(self, seed: int) -> None:
-        raise NotImplementedError("[Seed] Should be implemented by subclass")
+        pass
+
+    # events相关
+    @abstractmethod
+    def _init_event_mapping(self) -> None:
+        pass
+
+    def _init_event(self, events: list[Event]) -> None:
+        assert self.event_mapping is not None, "event_mapping must be provided"
+        self.events = events
+        event_status = EventStatus(
+            is_active=False, started_at=0, stopped_at=0, args=None
+        )
+        self.event_managers = [
+            self.event_mapping[event.event_id](
+                event_config=event, event_status=event_status
+            )
+            for event in self.events
+        ]
+        print(self.event_managers)
+
+    def get_events(self) -> list[Event]:
+        return self.events
+
+    def get_event_managers(self) -> list[EventManager]:
+        return self.event_managers
+
+    def trigger_event(self) -> None:
+        assert self.events is not None, "events must be provided to be triggered"
+        assert self.event_mapping is not None, (
+            "event_mapping must be provided to be triggered"
+        )
+        for event_idx, event_manager in enumerate(self.event_managers):
+            if event_manager.event_config.should_trigger_by_given_timestep:
+                assert (
+                    event_manager.event_config.given_timestep_trigger_args is not None
+                ), (
+                    f"{event_idx} given_timestep_trigger_args must be provided to be triggered"
+                )
+                if (
+                    self.cur_step
+                    == event_manager.event_config.given_timestep_trigger_args.trigger_at_timestep
+                ):
+                    event_manager.start(self.cur_step)
+            elif event_manager.event_config.should_trigger_by_random:
+                import random
+
+                assert event_manager.event_config.random_trigger_args is not None, (
+                    f"{event_idx} random_trigger_args must be provided to be triggered"
+                )
+                random_value_trigger = random.random()
+                if (
+                    random_value_trigger
+                    <= event_manager.event_config.random_trigger_args.trigger_frequency
+                ):
+                    event_manager.start(self.cur_step)
+            if event_manager.event_status.is_active:
+                if self.cur_step == event_manager.event_status.stopped_at:
+                    event_manager.stop()
