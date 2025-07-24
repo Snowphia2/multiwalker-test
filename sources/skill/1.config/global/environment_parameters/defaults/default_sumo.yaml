@@ -6,7 +6,7 @@ net_file: ???  # SUMO .net.xml文件路径
 route_file: ???  # SUMO .rou.xml文件路径
 
 # 可选参数
-out_csv_name: null  # 输出CSV文件名，为null时不生成输出
+out_csv_name: !!null  # 输出CSV文件名，为!!null时不生成输出
 use_gui: false  # 是否使用SUMO GUI运行仿真
 virtual_display: [3200, 1800]  # 虚拟显示分辨率
 begin_time: 0  # 仿真开始时间步（秒）
@@ -22,7 +22,7 @@ enforce_max_green: false  # 是否强制执行最大绿灯时间
 single_agent: false  # 是否为单智能体环境
 
 reward_fn: "diff-waiting-time"  # 奖励函数
-reward_weights: null  # 奖励函数权重列表
+reward_weights: !!null  # 奖励函数权重列表
 
 observation_class: "DefaultObservationFunction"  # 观测函数类
 add_system_info: true  # 是否添加系统信息
@@ -30,5 +30,5 @@ add_per_agent_info: true  # 是否添加每个智能体的信息
 sumo_seed: "random"  # SUMO随机种子
 fixed_ts: false  # 是否使用固定交通信号
 sumo_warnings: true  # 是否显示SUMO警告
-additional_sumo_cmd: null  # 额外的SUMO命令行参数
-render_mode: null  # 渲染模式
+additional_sumo_cmd: !!null  # 额外的SUMO命令行参数
+render_mode: !!null  # 渲染模式
