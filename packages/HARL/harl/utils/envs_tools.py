@@ -109,10 +109,13 @@ def make_train_env(env_name, seed, n_threads, env_args):
                 from harl.envs.sumo.pettingzoo_sumo_env import SumoEnvConfig
 
                 env_args1 = from_dict(SumoEnvConfig, env_args)
-                print("env_args1")
-                print(env_args1)
 
                 env = PettingZooSumoEnv(env_args1)
+            elif env_name == "mapdn":
+                from harl.envs.mapdn.mapdn_env import MapdnHARLEnv, MapdnEnvConfig
+
+                env_args1 = from_dict(MapdnEnvConfig, env_args)
+                env = MapdnHARLEnv(env_args1)
             elif env_name == "pettingzoo_mw_llm":
                 from harl.envs.pettingzoo_mw_llm.pettingzoo_mw_llm_env import (
                     PettingZooMWLLMEnv,
@@ -189,6 +192,11 @@ def make_eval_env(env_name, seed, n_threads, env_args):
                 env_args1 = from_dict(SumoEnvConfig, env_args)
 
                 env = PettingZooSumoEnv(env_args1)
+            elif env_name == "mapdn":
+                from harl.envs.mapdn.mapdn_env import MapdnHARLEnv, MapdnEnvConfig
+
+                env_args1 = from_dict(MapdnEnvConfig, env_args)
+                env = MapdnHARLEnv(env_args1)
             elif env_name == "pettingzoo_mw_llm":
                 from harl.envs.pettingzoo_mw_llm.pettingzoo_mw_llm_env import (
                     PettingZooMWLLMEnv,
@@ -259,10 +267,16 @@ def make_render_env(env_name, seed, env_args):
         from harl.envs.sumo.pettingzoo_sumo_env import PettingZooSumoEnv
         from harl.envs.sumo.pettingzoo_sumo_env import SumoEnvConfig
 
-        env_args1 = SumoEnvConfig(**env_args)
+        env_args1 = from_dict(SumoEnvConfig, env_args)
         env_args1.render_mode = "rgb_array"
 
         env = PettingZooSumoEnv(env_args1)
+        env.seed(seed * 60000)
+    elif env_name == "mapdn":
+        from harl.envs.mapdn.mapdn_env import MapdnHARLEnv, MapdnEnvConfig
+
+        env_args1 = from_dict(MapdnEnvConfig, env_args)
+        env = MapdnHARLEnv(env_args1)
         env.seed(seed * 60000)
     elif env_name == "gym":
         from harl.envs.gym.gym_env import GYMEnv

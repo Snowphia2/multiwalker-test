@@ -9,7 +9,6 @@ demand_scale: 1.0
 state_space: ["pv", "demand", "reactive", "vm_pu", "va_degree"]
 v_upper: 1.05
 v_lower: 0.95
-data_path: "./packages/MAPDN/mapdn/environments/var_voltage_control/data/case33_3min_final"
 episode_limit: 240 # in time intervals
 action_scale: !!null
 action_bias: !!null
@@ -20,3 +19,7 @@ seed: 42
 max_cycles: 240
 
 events: !!null
+
+
+data_path: "./packages/MAPDN/mapdn/environments/var_voltage_control/data/"
+scenario: "case33_3min_final"

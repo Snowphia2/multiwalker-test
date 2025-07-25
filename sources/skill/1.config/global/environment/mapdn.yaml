@@ -1,3 +1,3 @@
-name: pettingzoo_mw
+name: mapdn
 
-env_tweak: []
+env_tweak: !!null

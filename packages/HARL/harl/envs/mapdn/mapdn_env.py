@@ -76,6 +76,16 @@ class MapdnEnvConfig:
 
     events: Union[list[Event], None] = None
 
+    scenario: Literal[
+        "case33_3min_final",
+        "case141_3min_final",
+        "case322_3min_final",
+    ] = "case33_3min_final"
+
+    def __post_init__(self):
+        if self.data_path[-1] != "/":
+            self.data_path += "/"
+
 
 ActionType = np.ndarray[Any, np.dtype[np.int32]]
 ObsType = np.ndarray[Any, np.dtype[Union[np.float32, np.int32]]]
@@ -107,8 +117,10 @@ class MapdnWrapperEnv:
 
     def observation_space(self) -> gym.spaces.Box:
         return spaces.Box(
-            low=np.full(self.real_env.get_obs_size(), -np.inf, dtype=np.float32),
-            high=np.full(self.real_env.get_obs_size(), np.inf, dtype=np.float32),
+            low=np.float32(-np.inf),
+            high=np.float32(np.inf),
+            shape=(self.real_env.get_obs_size(),),
+            dtype=np.float32,
         )
 
     def action_spaces(self) -> dict[TAgentId, gym.spaces.Box]:
@@ -116,18 +128,22 @@ class MapdnWrapperEnv:
 
     def action_space(self) -> gym.spaces.Box:
         return spaces.Box(
-            low=np.array(
-                [-self.real_env.args.action_scale + self.real_env.args.action_bias]
+            low=np.float32(
+                -self.real_env.args.action_scale + self.real_env.args.action_bias
             ),
-            high=np.array(
-                [self.real_env.args.action_scale + self.real_env.args.action_bias]
+            high=np.float32(
+                self.real_env.args.action_scale + self.real_env.args.action_bias
             ),
+            shape=(1,),
+            dtype=np.float32,
         )
 
     def global_state_space(self) -> gym.spaces.Box:
         return spaces.Box(
-            low=np.full(self.real_env.get_state_size(), -np.inf, dtype=np.float32),
-            high=np.full(self.real_env.get_state_size(), np.inf, dtype=np.float32),
+            low=np.float32(-np.inf),
+            high=np.float32(np.inf),
+            shape=(self.real_env.get_state_size(),),
+            dtype=np.float32,
         )
 
     def state(self) -> StateType:
@@ -193,7 +209,7 @@ ActionAvailableType = list[int]
 AllAgentActionAvailableType = list[ActionAvailableType]
 
 
-class PettingZooSumoEnv(
+class MapdnHARLEnv(
     HarlEnvWithEvents[
         TAgentId,
         MapdnWrapperEnv,
@@ -258,8 +274,7 @@ class PettingZooSumoEnv(
         """
         return local_obs, global_state, rewards, dones, infos, available_actions
         """
-        actions_wrapped = self.wrap(actions.flatten().tolist())
-        obs, rew, term, trunc, info = self.env.step(actions_wrapped)  # type: ignore
+        obs, rew, term, trunc, info = self.env.step(actions.flatten().tolist())  # type: ignore
         # 这里的析构是aec_to_parallel_wrapper负责的
 
         self.cur_step += 1
@@ -277,7 +292,7 @@ class PettingZooSumoEnv(
             self.unwrap(global_state),
             rewards,
             self.unwrap(dones),
-            self.unwrap(info),
+            self.repeat(info),
             self.get_avail_actions(),
         )
 
