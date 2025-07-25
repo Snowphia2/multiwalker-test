@@ -1,4 +1,4 @@
-from harl.envs.pettingzoo_sumo.pettingzoo_sumo_env import SumoEnvConfig
+from harl.envs.sumo.pettingzoo_sumo_env import SumoEnvConfig
 from dataclasses import dataclass, field
 from typing import Optional, List, Union, cast
 import omegaconf

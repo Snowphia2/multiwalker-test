@@ -21,7 +21,7 @@ class PettingZooSumoLogger(BaseLogger):
         }
 
     def get_task_name(self):
-        return "pettingzoo_sumo"
+        return "sumo"
 
     def eval_init(self):
         super().eval_init()

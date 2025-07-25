@@ -255,18 +255,27 @@ class HarlEnvWithEvents(
             return [1] * space.shape[0]
 
     def wrap(self, lam: list[T]) -> dict[TAgentId, T]:
+        """
+        将数组转换为字典，key为agent_id，value为数组中的元素
+        """
         d = {}
         for i, agent in enumerate(self.agents):
             d[agent] = lam[i]
         return d
 
     def unwrap(self, d: dict[TAgentId, T]) -> list[T]:
+        """
+        将字典转换为数组，数组中的元素为字典中的value
+        """
         _tmp = []
         for agent in self.agents:
             _tmp.append(d[agent])
         return _tmp
 
     def repeat(self, a: T) -> list[T]:
+        """
+        将元素重复n_agents次
+        """
         return [a for _ in range(self.n_agents)]
 
     @abstractmethod

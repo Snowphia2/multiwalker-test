@@ -101,12 +101,12 @@ def make_train_env(env_name, seed, n_threads, env_args):
                 )
 
                 env = PettingZooMWEnv(env_args)
-            elif env_name == "pettingzoo_sumo":
-                from harl.envs.pettingzoo_sumo.pettingzoo_sumo_env import (
+            elif env_name == "sumo":
+                from harl.envs.sumo.pettingzoo_sumo_env import (
                     PettingZooSumoEnv,
                 )
 
-                from harl.envs.pettingzoo_sumo.pettingzoo_sumo_env import SumoEnvConfig
+                from harl.envs.sumo.pettingzoo_sumo_env import SumoEnvConfig
 
                 env_args1 = from_dict(SumoEnvConfig, env_args)
                 print("env_args1")
@@ -179,12 +179,12 @@ def make_eval_env(env_name, seed, n_threads, env_args):
 
                 env_args["custom"]["is_eval"] = True
                 env = PettingZooMWEnv(env_args)
-            elif env_name == "pettingzoo_sumo":
-                from harl.envs.pettingzoo_sumo.pettingzoo_sumo_env import (
+            elif env_name == "sumo":
+                from harl.envs.sumo.pettingzoo_sumo_env import (
                     PettingZooSumoEnv,
                 )
 
-                from harl.envs.pettingzoo_sumo.pettingzoo_sumo_env import SumoEnvConfig
+                from harl.envs.sumo.pettingzoo_sumo_env import SumoEnvConfig
 
                 env_args1 = from_dict(SumoEnvConfig, env_args)
 
@@ -255,9 +255,9 @@ def make_render_env(env_name, seed, env_args):
         manual_delay = False
         env = PettingZooMWLLMEnv({**env_args, "render_mode": "rgb_array"})
         env.seed(seed * 60000)
-    elif env_name == "pettingzoo_sumo":
-        from harl.envs.pettingzoo_sumo.pettingzoo_sumo_env import PettingZooSumoEnv
-        from harl.envs.pettingzoo_sumo.pettingzoo_sumo_env import SumoEnvConfig
+    elif env_name == "sumo":
+        from harl.envs.sumo.pettingzoo_sumo_env import PettingZooSumoEnv
+        from harl.envs.sumo.pettingzoo_sumo_env import SumoEnvConfig
 
         env_args1 = SumoEnvConfig(**env_args)
         env_args1.render_mode = "rgb_array"
@@ -330,7 +330,9 @@ def get_num_agents(env, env_args, envs):
         return envs.n_agents
     elif env == "pettingzoo_mw":
         return envs.n_agents
-    elif env == "pettingzoo_sumo":
+    elif env == "sumo":
         return envs.n_agents
     elif env == "pettingzoo_mw_llm":
+        return envs.n_agents
+    elif env == "mapdn":
         return envs.n_agents

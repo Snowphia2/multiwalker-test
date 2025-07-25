@@ -1,139 +1,264 @@
 import copy
 import logging
 
-from dataclasses import dataclass
-from typing import Optional, Union
+from dataclasses import asdict, dataclass, field
+from typing import Any, Union, Literal, TypeVar
 from gymnasium import spaces
-from pettingzoo.utils import wrappers
-from pettingzoo.utils.conversions import parallel_wrapper_fn
-
-import sumo_rl
-import numpy as np
 from mapdn.environments.var_voltage_control.voltage_control_env import VoltageControl
+import numpy as np
 
+import gymnasium as gym
+
+# from pettingzoo.sisl import multiwalker_v9
+from ..harl_env_with_events import (
+    HarlEnvWithEvents,
+    Event,
+)
+
+# from pettingzoo.sisl import multiwalker_v9
 
 logging.basicConfig()
 logging.getLogger().setLevel(logging.ERROR)
 
 
-class SumoEnvironmentPZWithGlobalState(sumo_rl.SumoEnvironmentPZ):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.state_space = self.get_state_space()
-
-    def get_state_space(self):
-        _a = self.env.ts_ids[0]
-        ts = self.env.traffic_signals[_a]
-        low = ts.num_green_phases + 1 + 2 * len(ts.lanes)
-        return spaces.Box(
-            low=np.zeros(low * self.num_agents, dtype=np.float32),
-            high=np.ones(low * self.num_agents, dtype=np.float32),
-        )
-
-    def state(self):
-        obs = []
-        for agent in self.agents:
-            obs.append(self.observe(agent))
-        global_state = np.array(obs).flatten().astype(np.float32)
-        return global_state
-
-    def step(self, action):
-        super().step(action)
-
-
-def env(**kwargs):
-    """Instantiate a PettingoZoo environment."""
-    env = SumoEnvironmentPZWithGlobalState(**kwargs)
-    env = wrappers.AssertOutOfBoundsWrapper(env)
-    env = wrappers.OrderEnforcingWrapper(env)
-    return env
-
-
-parallel_env = parallel_wrapper_fn(env)
-
-
 @dataclass
-class SumoEnvConfig:
-    """SUMO环境配置类
+class MapdnEnvConfig:
+    """
+    MapDN环境配置类
 
-    包含SUMO交通仿真环境的所有配置参数
+    包含MapDN电压控制环境的所有配置参数。参数说明参考
+    sources/skill/1.config/global/environment_parameters/defaults/default_mapdn.yaml。
+
+    Args:
+        voltage_barrier_type (Literal): 电压约束类型，可选 "l1", "l2", "bowl", "courant_beltrami", "bump"
+        voltage_weight (float): 电压约束损失权重
+        q_weight (float): 无功功率损失权重
+        line_weight (Optional[float]): 线路损失权重
+        dq_dv_weight (Optional[float]): 电压变化损失权重
+        history (int): 状态历史步数
+        pv_scale (float): 光伏规模缩放因子
+        demand_scale (float): 负荷规模缩放因子
+        state_space (list[str]): 状态空间特征
+        v_upper (float): 电压上限
+        v_lower (float): 电压下限
+        data_path (str): 数据路径
+        episode_limit (int): 每回合步数上限
+        action_scale (Optional[float]): 动作缩放因子
+        action_bias (Optional[float]): 动作偏置
+        mode (Optional[str]): 控制模式（分布式/去中心化）
+        reset_action (bool): 是否重置动作
+        seed (int): 随机种子
     """
 
-    net_file: str
-    route_file: str
-    out_csv_name: Optional[str] = None
-    use_gui: bool = False
-    virtual_display: tuple[int, int] = (3200, 1800)
-    begin_time: int = 0
-    num_seconds: int = 20000
-    max_depart_delay: int = -1
-    waiting_time_memory: int = 1000
-    time_to_teleport: int = -1
-    delta_time: int = 5
-    yellow_time: int = 2
-    min_green: int = 5
-    max_green: int = 50
-    enforce_max_green: bool = False
-    single_agent: bool = False
-    reward_fn: str = "diff-waiting-time"
-    reward_weights: Optional[list[float]] = None
+    voltage_barrier_type: Literal["l1", "l2", "bowl", "courant_beltrami", "bump"]
+    voltage_weight: float = 1.0
+    q_weight: float = 0.1
+    line_weight: Union[float, None] = None
+    dq_dv_weight: Union[float, None] = None
+    history: int = 1
+    pv_scale: float = 1.0
+    demand_scale: float = 1.0
+    state_space: list[str] = field(
+        default_factory=lambda: ["pv", "demand", "reactive", "vm_pu", "va_degree"]
+    )
+    v_upper: float = 1.05
+    v_lower: float = 0.95
+    data_path: str = (
+        "./packages/MAPDN/mapdn/environments/var_voltage_control/data/case33_3min_final"
+    )
+    episode_limit: int = 240
+    action_scale: Union[float, None] = None
+    action_bias: Union[float, None] = None
+    mode: Union[Literal["distributed", "decentralised"], None] = "distributed"
+    reset_action: bool = True
+    seed: int = 42
+    max_cycles: int = 240
 
-    observation_class: Union[str, type] = "DefaultObservationFunction"
-
-    add_system_info: bool = True
-    add_per_agent_info: bool = True
-    sumo_seed: Union[str, int] = "random"
-    fixed_ts: bool = False
-    sumo_warnings: bool = True
-    additional_sumo_cmd: Optional[str] = None
-    render_mode: Optional[str] = None
+    events: Union[list[Event], None] = None
 
 
-class MAPDNEnv:
-    def __init__(self, args):
-        self.args = copy.deepcopy(args)
-        self.env = VoltageControl(self.args, [])  # FIXME!
+ActionType = np.ndarray[Any, np.dtype[np.int32]]
+ObsType = np.ndarray[Any, np.dtype[Union[np.float32, np.int32]]]
+StateType = np.ndarray[Any, np.dtype[Union[np.float32, np.int32]]]
 
-        self.env.reset()
 
-        # sumo是离散动作
-        self.discrete: bool = False
+TAgentId = str
+TArgs = dict[str, Any]
+TDeepDict = dict[TAgentId, dict[str, Any]]
+ObsWrappedType = dict[TAgentId, ObsType]
 
-        # self.max_cycles: int = (args.num_seconds) // args.delta_time - 1
+T = TypeVar("T")
 
-        self.cur_step: int = 0
 
-        self.n_agents = self.env.get_num_of_agents()
-        self.agents = [i for i in range(self.n_agents)]
+class MapdnWrapperEnv:
+    def __init__(self, args: MapdnEnvConfig, disturbances: list[Any]):
+        self.args: MapdnEnvConfig = copy.deepcopy(args)
+        dict_args = asdict(args)
+        del dict_args["events"]
+        self.real_env = VoltageControl(dict_args, disturbances)
+        self.n_agents = self.real_env.n_agents
+        self.agents = [f"agent_{i}" for i in range(self.n_agents)]
 
-        # 如果是dict, unwrap
-        single_observation_space = spaces.Box(  # FIXME!
-            low=np.zeros(self.env.obs_size, dtype=np.float32),
-            high=np.ones(self.env.obs_size, dtype=np.float32),
+    def close(self):
+        pass
+
+    def observation_spaces(self) -> dict[TAgentId, gym.spaces.Box]:
+        return {agent: self.observation_space() for agent in self.agents}
+
+    def observation_space(self) -> gym.spaces.Box:
+        return spaces.Box(
+            low=np.full(self.real_env.get_obs_size(), -np.inf, dtype=np.float32),
+            high=np.full(self.real_env.get_obs_size(), np.inf, dtype=np.float32),
         )
-        single_action_space = spaces.Box(
+
+    def action_spaces(self) -> dict[TAgentId, gym.spaces.Box]:
+        return {agent: self.action_space() for agent in self.agents}
+
+    def action_space(self) -> gym.spaces.Box:
+        return spaces.Box(
             low=np.array(
-                [-self.args.action_scale + self.args.action_bias], dtype=np.float32
+                [-self.real_env.args.action_scale + self.real_env.args.action_bias]
             ),
             high=np.array(
-                [self.args.action_scale + self.args.action_bias], dtype=np.float32
+                [self.real_env.args.action_scale + self.real_env.args.action_bias]
             ),
         )
-        self.observation_space = self.unwrap(single_observation_space)  # FIXME!
-        self.action_space = self.unwrap(single_action_space)
-        self.share_observation_space = self.repeat(self.env.state_space)  # FIXME!
+
+    def global_state_space(self) -> gym.spaces.Box:
+        return spaces.Box(
+            low=np.full(self.real_env.get_state_size(), -np.inf, dtype=np.float32),
+            high=np.full(self.real_env.get_state_size(), np.inf, dtype=np.float32),
+        )
+
+    def state(self) -> StateType:
+        return self.real_env.get_state()
+
+    def _type_safe_get_obs(self) -> list[ObsType]:
+        return self.real_env.get_obs()
+
+    def _type_safe_env_step(
+        self, actions: ActionType
+    ) -> tuple[list[ObsType], float, bool, dict[str, Any]]:
+        reward, terminated, info = self.real_env.step(actions)  # type: ignore
+        reward: float
+        terminated: bool
+        info: dict[str, Any]
+        obs = self._type_safe_get_obs()
+        return obs, reward, terminated, info
+
+    def step(self, actions: ActionType):
+        obs, reward, terminated, info = self._type_safe_env_step(actions)  # type: ignore
+
+        return (
+            self.wrap(obs),
+            self.wrap(self.repeat(reward)),
+            self.wrap(self.repeat(terminated)),
+            self.wrap(self.repeat(terminated)),
+            info,
+        )
+
+    def reset(self, seed: Union[int, None] = None):
+        obs, global_state = self.real_env.reset()
+        return self.wrap(obs), global_state
+
+    def render(self) -> None:
+        self.real_env.render()
+
+    def wrap(self, lam: list[T]) -> dict[TAgentId, T]:
+        """
+        将数组转换为字典，key为agent_id，value为数组中的元素
+        """
+        d = {}
+        for i, agent in enumerate(self.agents):
+            d[agent] = lam[i]
+        return d
+
+    def unwrap(self, d: dict[TAgentId, T]) -> list[T]:
+        """
+        将字典转换为数组，数组中的元素为字典中的value
+        """
+        _tmp = []
+        for agent in self.agents:
+            _tmp.append(d[agent])
+        return _tmp
+
+    def repeat(self, a: T) -> list[T]:
+        """
+        将元素重复n_agents次
+        """
+        return [a for _ in range(self.n_agents)]
+
+
+ActionAvailableType = list[int]
+AllAgentActionAvailableType = list[ActionAvailableType]
+
+
+class PettingZooSumoEnv(
+    HarlEnvWithEvents[
+        TAgentId,
+        MapdnWrapperEnv,
+        MapdnEnvConfig,
+        ObsType,
+        ActionType,
+        StateType,
+    ]
+):
+    events: list[Event]
+    n_agents: int
+    share_observation_space: list[gym.spaces.Box]
+    observation_space: list[gym.spaces.Box]
+    action_space: list[Union[gym.spaces.Box, gym.spaces.Discrete]]
+    agents: list[TAgentId]
+    _seed: int
+
+    def __init__(self, args: MapdnEnvConfig):
+        self.args: MapdnEnvConfig = copy.deepcopy(args)
+
+        self.discrete: bool = False
+        self.max_cycles: int = args.max_cycles
+        self.cur_step: int = 0
+
+        self.env = MapdnWrapperEnv(args, disturbances=[])
+        self.env.reset()
+
+        self.n_agents = self.env.n_agents
+        self.agents = [f"agent_{i}" for i in range(self.n_agents)]
+
+        # 如果是dict, unwrap
+        self.observation_space = self.unwrap(self.env.observation_spaces())  # type: ignore
+        self.action_space = self.unwrap(self.env.action_spaces())  # type: ignore
+        self.share_observation_space = self.repeat(self.env.global_state_space())
         self._seed = 0
         self.cur_step = 0
 
-    @property
-    def global_state(self):
-        return self.env.get_state()
+        # events
+        if args.events is not None:
+            self._init_event_mapping()
+            self._init_event(args.events)
 
-    def step(self, actions):  # FIXME!
+        super().__init__(args)
+
+    def _init_event_mapping(self) -> None:
+        pass
+
+    @property
+    def global_state(self) -> StateType:
+        return self.env.state()
+
+    def step(
+        self, actions
+    ) -> tuple[
+        list[ObsType],
+        list[StateType],
+        list[list[float]],
+        list[bool],
+        list[dict[str, Any]],
+        Union[AllAgentActionAvailableType, None],
+    ]:
         """
         return local_obs, global_state, rewards, dones, infos, available_actions
         """
-        actions_wrapped = self.wrap(actions.flatten())
+        actions_wrapped = self.wrap(actions.flatten().tolist())
         obs, rew, term, trunc, info = self.env.step(actions_wrapped)  # type: ignore
         # 这里的析构是aec_to_parallel_wrapper负责的
 
@@ -143,53 +268,33 @@ class MAPDNEnv:
             for agent in self.agents:
                 info[agent]["bad_transition"] = True
         dones = {agent: term[agent] or trunc[agent] for agent in self.agents}
-        global_state = self.repeat(self.env.state())
-        total_reward = sum([rew[agent] for agent in self.agents])
-        rewards = [[total_reward]] * self.n_agents
+        global_state = self.wrap(self.repeat(self.global_state))
+        total_reward: float = sum([rew[agent] for agent in self.agents])
+        rewards: list[list[float]] = [[total_reward]] * self.n_agents
+        # self.trigger_event()
         return (
             self.unwrap(obs),
-            global_state,
+            self.unwrap(global_state),
             rewards,
             self.unwrap(dones),
             self.unwrap(info),
             self.get_avail_actions(),
         )
 
-    def reset(self):  # FIXME
+    def reset(self):
         """重置环境并返回初始观测和状态"""
         self._seed += 1
         self.cur_step = 0
-        obs, infos = self.env.reset(seed=self._seed)  # type: ignore
+        obs, global_state = self.env.reset(seed=self._seed)  # type: ignore
         obs = self.unwrap(obs)
-        s_obs = self.repeat(self.env.state())
-        avail_actions = self.get_avail_actions()
+        s_obs = self.repeat(global_state)
+        return obs, s_obs, self.get_avail_actions()
 
-        obs_n = np.array(obs)
-        s_obs_n = np.array(s_obs)
-        avail_actions_n = np.array(avail_actions)
-        return obs_n, s_obs_n, avail_actions_n
-
-    def get_avail_actions(self):
-        return None
-
-    def get_avail_agent_actions(self, agent_id):
-        """Returns the available actions for agent_id"""
-        return [1] * self.action_space[agent_id].n
-
-    def render(self):
+    def render(self) -> None:
         self.env.render()
 
-    def close(self):
+    def close(self) -> None:
         self.env.close()
 
-    def seed(self, seed):
+    def seed(self, seed: int) -> None:
         self._seed = seed
-
-    def wrap(self, target):
-        return {agent: target[i] for i, agent in enumerate(self.agents)}
-
-    def unwrap(self, target):
-        return [target[agent] for agent in self.agents]
-
-    def repeat(self, a):
-        return [a for _ in range(self.n_agents)]

@@ -312,7 +312,7 @@ class VoltageControl(MultiAgentEnv):
         state = np.array(state)
         return state
 
-    def get_obs(self):
+    def get_obs(self) -> list[np.ndarray]:
         """return the obs for each agent in the power system
         the default obs: voltage, active power of generators, bus state, load active power, load reactive power
         each agent can only observe the state within the zone where it belongs
@@ -386,7 +386,7 @@ class VoltageControl(MultiAgentEnv):
             obs_len_list = list()
             zone_obs_list = list()
             for i in range(self.n_agents):
-                zone_buses, pv, q, sgen_buses = clusters[f"zone{i+1}"]
+                zone_buses, pv, q, sgen_buses = clusters[f"zone{i + 1}"]
                 obs = list()
                 if "demand" in self.state_space:
                     copy_zone_buses = copy.deepcopy(zone_buses)
@@ -473,7 +473,7 @@ class VoltageControl(MultiAgentEnv):
         elif self.args.mode == "decentralised":
             avail_actions = np.zeros(self.n_actions)
             zone_sgens = self.base_powergrid.sgen.loc[
-                self.base_powergrid.sgen["name"] == f"zone{agent_id+1}"
+                self.base_powergrid.sgen["name"] == f"zone{agent_id + 1}"
             ]
             avail_actions[zone_sgens.index] = 1
             return avail_actions
@@ -668,16 +668,16 @@ class VoltageControl(MultiAgentEnv):
         elif self.args.mode == "decentralised":
             for i in range(self.n_agents):
                 zone_res_buses = self.powergrid.res_bus.sort_index().loc[
-                    self.powergrid.bus["zone"] == f"zone{i+1}"
+                    self.powergrid.bus["zone"] == f"zone{i + 1}"
                 ]
                 sgen_res_buses = self.powergrid.sgen["bus"].loc[
-                    self.powergrid.sgen["name"] == f"zone{i+1}"
+                    self.powergrid.sgen["name"] == f"zone{i + 1}"
                 ]
                 pv = self.powergrid.sgen["p_mw"].loc[
-                    self.powergrid.sgen["name"] == f"zone{i+1}"
+                    self.powergrid.sgen["name"] == f"zone{i + 1}"
                 ]
                 q = self.powergrid.sgen["q_mvar"].loc[
-                    self.powergrid.sgen["name"] == f"zone{i+1}"
+                    self.powergrid.sgen["name"] == f"zone{i + 1}"
                 ]
                 # 从load中获取p_mw和q_mvar
                 zone_load = self.powergrid.load.loc[
@@ -685,7 +685,7 @@ class VoltageControl(MultiAgentEnv):
                 ]
                 zone_res_buses["p_mw"] = zone_load["p_mw"].values
                 zone_res_buses["q_mvar"] = zone_load["q_mvar"].values
-                clusters[f"zone{i+1}"] = (zone_res_buses, pv, q, sgen_res_buses)
+                clusters[f"zone{i + 1}"] = (zone_res_buses, pv, q, sgen_res_buses)
         return clusters
 
     def _take_action(self, actions):

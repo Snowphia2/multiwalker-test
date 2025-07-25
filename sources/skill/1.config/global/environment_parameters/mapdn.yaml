@@ -1,0 +1,6 @@
+defaults:
+  - defaults/default_mapdn@_here_
+  - _self_
+
+voltage_barrier_type: bowl
+mode: distributed

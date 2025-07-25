@@ -60,7 +60,7 @@ def _to_harl_dict(
         from .types.environment.type_multiwalker import multiwalker_customize_dict
 
         algo_dict, env_dict = multiwalker_customize_dict(cfg, algo_dict, env_dict)
-    elif env_name == "pettingzoo_sumo":
+    elif env_name == "sumo":
         from .types.environment.type_sumo import sumo_customize_dict
 
         algo_dict, env_dict = sumo_customize_dict(cfg, algo_dict, env_dict, save_group)
