@@ -38,9 +38,7 @@ logging.getLogger().setLevel(logging.DEBUG)
 
 
 ActionType = np.ndarray[(4,), np.dtype[np.float32]]  # shape=(4,), dtype=np.float32
-ObsType = np.ndarray[
-    Union[(31,), (33,)], np.dtype[np.float32]
-]  # shape=(31,), dtype=np.float32
+ObsType = np.ndarray[Any, np.dtype[np.float32]]  # shape=(31,), dtype=np.float32
 StateType = np.ndarray[Any, np.dtype[np.float32]]  # shape=(31,), dtype=np.float32
 # self.n_walkers * 24 + 3,
 all_multiwalkers_united = Union[
@@ -212,3 +210,9 @@ class PettingZooMWEnv(
     def seed(self, seed: int) -> None:
         self._seed = seed
         _ = self.env.reset(seed=self._seed)
+
+    def _init_event_mapping(self) -> None:
+        pass
+
+    def _init_event(self, events: list[Event]) -> None:
+        pass

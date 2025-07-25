@@ -13,7 +13,7 @@ parameters:
   algorithm_parameters.algo.actor_num_mini_batch:
     values: [1, 2, 4]
   algorithm:
-    values: [mappo, happo]
+    values: [hasac]
 command:
   - ${env}
   - uv

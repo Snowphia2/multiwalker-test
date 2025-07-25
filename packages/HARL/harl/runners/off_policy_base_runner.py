@@ -98,6 +98,7 @@ class OffPolicyBaseRunner:
                 else None
             )
         self.num_agents = get_num_agents(args["env"], env_args, self.envs)
+        assert self.num_agents is not None, "num_agents is None"
         self.agent_deaths = np.zeros(
             (self.algo_args["train"]["n_rollout_threads"], self.num_agents, 1)
         )
@@ -123,10 +124,12 @@ class OffPolicyBaseRunner:
                 assert (
                     self.envs.observation_space[agent_id]
                     == self.envs.observation_space[0]
-                ), "Agents have heterogeneous observation spaces, parameter sharing is not valid."
-                assert (
-                    self.envs.action_space[agent_id] == self.envs.action_space[0]
-                ), "Agents have heterogeneous action spaces, parameter sharing is not valid."
+                ), (
+                    "Agents have heterogeneous observation spaces, parameter sharing is not valid."
+                )
+                assert self.envs.action_space[agent_id] == self.envs.action_space[0], (
+                    "Agents have heterogeneous action spaces, parameter sharing is not valid."
+                )
                 self.actor.append(self.actor[0])
         else:
             self.actor = []
@@ -214,6 +217,9 @@ class OffPolicyBaseRunner:
 
     def run(self):
         """Run the training (or rendering) pipeline."""
+        assert self.num_agents is not None, "num_agents is None"
+        assert self.envs is not None, "envs is None"
+
         if self.algo_args["render"]["use_render"]:  # render, not train
             self.render()
             return
@@ -665,6 +671,19 @@ class OffPolicyBaseRunner:
                 self.writter.add_scalar(
                     "eval_average_episode_length", eval_avg_len, step
                 )
+
+                import wandb
+
+                try:
+                    wandb.log(
+                        {
+                            "step": step,
+                            "eval_average_episode_rewards": eval_avg_rew,
+                            "eval_average_steps": eval_avg_len,
+                        }
+                    )
+                except Exception as e:
+                    print(f"Error logging to wandb: {e}")
                 break
 
     @torch.no_grad()

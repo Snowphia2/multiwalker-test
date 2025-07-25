@@ -119,7 +119,6 @@ terminate_on_fall=True, remove_on_fall=True, terrain_length=200, max_cycles=500)
 
 """
 
-from typing import Union
 import numpy as np
 from gymnasium.utils import EzPickle
 from pettingzoo import AECEnv
@@ -138,12 +137,10 @@ from .mw_talk import MultiWalkerEnv as _env_talk
 from .multiwalker_custom import MultiWalkerEnv as _env_custom
 from .mw_move import MultiWalkerEnv as _env_move
 from .mw_move import MOVE_DOESNT_CARE
-
+from typing import Any
 
 ActionType = np.ndarray[(4,), np.dtype[np.float32]]  # shape=(4,), dtype=np.float32
-ObsType = np.ndarray[
-    Union[(31,), (33,)], np.dtype[np.float32]
-]  # shape=(31,), dtype=np.float32
+ObsType = np.ndarray[Any, np.dtype[np.float32]]  # shape=(31,), dtype=np.float32
 
 
 class raw_env(AECEnv[str, ObsType, ActionType], EzPickle):
