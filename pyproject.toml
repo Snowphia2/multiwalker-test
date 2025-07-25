@@ -41,6 +41,7 @@ dependencies = [
   "dacite>=1.9.2",
   "pyvirtualdisplay>=3.0",
   "libsumo>=1.24.0",
+  "gdown>=5.2.0",
 ]
 [tool.uv.sources]
 harl = { workspace = true }
@@ -51,5 +52,5 @@ mapdn = { workspace = true }
 members = ["packages/HARL", "packages/SUMO", "packages/MAPDN"]
 
 [[tool.uv.index]]
-url = "https://mirrors.cernet.edu.cn/pypi/web/simple"
+url = "https://mirrors.cernet.edu.cn/pypi/web/simple" # for China
 default = true
