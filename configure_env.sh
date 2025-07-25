@@ -3,6 +3,9 @@
 # please edit pyproject.toml/[[tool.uv.index]] to use a index which is faster in your region; if you are not in China, you can remove the index line to use pypi.org
 uv sync
 
+# pettingzoo warns when action is out of bound. it is annoying.
+sed -i '60,62 s/^/        # /' .venv/lib/python3.9/site-packages/pettingzoo/utils/env_logger.py
+
 # Install SUMO
 apt update
 apt install software-properties-common -y
