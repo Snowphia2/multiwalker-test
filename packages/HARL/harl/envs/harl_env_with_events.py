@@ -84,14 +84,27 @@ class EventStatus:
     args: Union[EventData_GivenValue, EventData_RandomValue, None]
 
 
-class EventManager(ABC):
+TEnvRaw = TypeVar("TEnvRaw")
+
+
+class EventManager(Generic[TEnv, TEnvRaw], ABC):
     event_config: Event
     event_status: EventStatus
     original_backup: Any
+    env: TEnv
+    real_env: TEnvRaw
 
-    def __init__(self, event_config: Event, event_status: EventStatus):
+    @abstractmethod
+    def _get_real_env(self) -> Any:
+        return self.env
+
+    def __init__(self, event_config: Event, env: TEnv):
         self.event_config = event_config
-        self.event_status = event_status
+        self.event_status = EventStatus(
+            is_active=False, started_at=0, stopped_at=0, args=None
+        )
+        self.env = env
+        self.real_env = self._get_real_env()
 
     @abstractmethod
     def _event_random_value(self) -> Any:
@@ -268,13 +281,8 @@ class HarlEnvWithEvents(
     def _init_event(self, events: list[Event]) -> None:
         assert self.event_mapping is not None, "event_mapping must be provided"
         self.events = events
-        event_status = EventStatus(
-            is_active=False, started_at=0, stopped_at=0, args=None
-        )
         self.event_managers = [
-            self.event_mapping[event.event_id](
-                event_config=event, event_status=event_status
-            )
+            self.event_mapping[event.event_id](event_config=event, env=self.env)
             for event in self.events
         ]
         print(self.event_managers)

@@ -2,7 +2,7 @@ import copy
 import logging
 
 from dataclasses import asdict, dataclass, field
-from typing import Any, Optional, Union, cast
+from typing import Any, Optional, Union
 from gymnasium import spaces
 from pettingzoo.utils import wrappers
 from pettingzoo.utils.conversions import parallel_wrapper_fn
@@ -114,7 +114,7 @@ ObsWrappedType = dict[TAgentId, ObsType]
 class PettingZooSumoEnv(
     HarlEnvWithEvents[
         str,
-        SumoEnvironmentPZWithGlobalState,
+        aec_to_parallel_wrapper,
         SumoEnvConfig,
         ObsType,
         ActionType,
@@ -145,10 +145,7 @@ class PettingZooSumoEnv(
         dict_args["virtual_display"] = tuple(dict_args["virtual_display"])
         del dict_args["observation_class"]
         del dict_args["events"]
-        self.env: SumoEnvironmentPZWithGlobalState = cast(
-            SumoEnvironmentPZWithGlobalState,
-            parallel_env(**dict_args, observation_class=args.observation_class),
-        )
+        self.env = parallel_env(**dict_args, observation_class=args.observation_class)
         self.env.reset()
 
         self.n_agents = self.env.num_agents
@@ -196,7 +193,7 @@ class PettingZooSumoEnv(
         global_state = self.repeat(self.global_state)
         total_reward: float = sum([rew[agent] for agent in self.agents])
         rewards: list[list[float]] = [[total_reward]] * self.n_agents
-        self.trigger_event()
+        # self.trigger_event()
         return (
             self.unwrap(obs),
             global_state,

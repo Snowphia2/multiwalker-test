@@ -172,7 +172,12 @@ class SumoEnvironment(gym.Env):
             conn = traci
         else:
             traci.start(
-                [sumolib.checkBinary("sumo"), "-n", self._net],
+                [
+                    sumolib.checkBinary("sumo"),
+                    "-n",
+                    self._net,
+                    "--no-warnings",
+                ],  # 合流的时候会有大量warning 很烦人
                 label="init_connection" + self.label,
             )
             conn = traci.getConnection("init_connection" + self.label)

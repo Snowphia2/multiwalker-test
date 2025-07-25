@@ -2,12 +2,8 @@ import os
 import shutil
 import subprocess
 
-import numpy as np
 import supersuit as ss
-import traci
-from pyvirtualdisplay.smartdisplay import SmartDisplay
 from stable_baselines3 import PPO
-from stable_baselines3.common.callbacks import EvalCallback
 from stable_baselines3.common.evaluation import evaluate_policy
 from stable_baselines3.common.vec_env import VecMonitor
 from tqdm import trange
@@ -18,7 +14,11 @@ import sumo_rl
 if __name__ == "__main__":
     RESOLUTION = (3200, 1800)
 
-    env = sumo_rl.grid4x4(use_gui=True, out_csv_name="outputs/grid4x4/ppo_test", virtual_display=RESOLUTION)
+    env = sumo_rl.grid4x4(
+        use_gui=True,
+        out_csv_name="outputs/grid4x4/ppo_test",
+        virtual_display=RESOLUTION,
+    )
 
     max_time = env.unwrapped.env.sim_max_time
     delta_time = env.unwrapped.env.delta_time
@@ -75,7 +75,9 @@ if __name__ == "__main__":
         img = env.render()
         img.save(f"temp/img{t}.jpg")
 
-    subprocess.run(["ffmpeg", "-y", "-framerate", "5", "-i", "temp/img%d.jpg", "output.mp4"])
+    subprocess.run(
+        ["ffmpeg", "-y", "-framerate", "5", "-i", "temp/img%d.jpg", "output.mp4"]
+    )
 
     print("All done, cleaning up")
     shutil.rmtree("temp")

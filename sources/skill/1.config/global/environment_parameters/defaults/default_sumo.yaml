@@ -7,7 +7,7 @@ route_file: ???  # SUMO .rou.xml文件路径
 
 # 可选参数
 out_csv_name: !!null  # 输出CSV文件名，为!!null时不生成输出
-use_gui: false  # 是否使用SUMO GUI运行仿真
+use_gui: True  # 是否使用SUMO GUI运行仿真
 virtual_display: [3200, 1800]  # 虚拟显示分辨率
 begin_time: 0  # 仿真开始时间步（秒）
 num_seconds: 20000  # 仿真持续时间（秒）

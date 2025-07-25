@@ -659,6 +659,17 @@ wheels = [
 ]
 
 [[package]]
+name = "eclipse-sumo"
+version = "1.24.0"
+source = { registry = "https://mirrors.cernet.edu.cn/pypi/web/simple" }
+wheels = [
+    { url = "https://mirrors4.tuna.tsinghua.edu.cn/pypi/web/packages/49/b6/71b5e2cbf3989999669fee3707f39fce94c5af5ed036f6ec19d4b77a1f0d/eclipse_sumo-1.24.0-py2.py3-none-macosx_15_0_arm64.whl", hash = "sha256:52bda84d18a430ff1d3765cb8161036ec2240bc8077eb2669b18d3d90d1a29e7", size = 68037779, upload-time = "2025-07-22T15:49:08.375Z" },
+    { url = "https://mirrors4.tuna.tsinghua.edu.cn/pypi/web/packages/32/5c/3a413efb45d9476cc7a87880f8451e3096a32a81a2339da0b7aa6c312636/eclipse_sumo-1.24.0-py2.py3-none-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:3169b0fe93b0ccf694cf11a6a0b91916449cf1544c12e04882835390c0d4d417", size = 91473432, upload-time = "2025-07-22T15:50:48.797Z" },
+    { url = "https://mirrors4.tuna.tsinghua.edu.cn/pypi/web/packages/4c/a2/963ebbcaaedf5b784cfced3e0c01e9459ad6e88f3e2d9308a17a7978d324/eclipse_sumo-1.24.0-py2.py3-none-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:bcf9fffb52e50661b0ecdce8bcbc9db25baaaf2d3935160be33c41f75abbfb6c", size = 94647963, upload-time = "2025-07-22T15:52:30.81Z" },
+    { url = "https://mirrors4.tuna.tsinghua.edu.cn/pypi/web/packages/38/cc/08f44a25964ed0b881be2410c0b3ca9a07c5fdc5e5f9729c2db5ac27daef/eclipse_sumo-1.24.0-py2.py3-none-win_amd64.whl", hash = "sha256:8c0e7faf478ae8ccf1a0a1df486de8ceec8d7d5c6b4fbe58ecbd4515b159bd8b", size = 162475094, upload-time = "2025-07-22T15:55:12.667Z" },
+]
+
+[[package]]
 name = "eval-type-backport"
 version = "0.2.2"
 source = { registry = "https://mirrors.cernet.edu.cn/pypi/web/simple" }
@@ -1634,6 +1645,33 @@ wheels = [
 ]
 
 [[package]]
+name = "libsumo"
+version = "1.24.0"
+source = { registry = "https://mirrors.cernet.edu.cn/pypi/web/simple" }
+dependencies = [
+    { name = "eclipse-sumo" },
+    { name = "traci" },
+]
+wheels = [
+    { url = "https://mirrors4.tuna.tsinghua.edu.cn/pypi/web/packages/b9/56/629b68ef64cb25ef05325b6ff48470227dd42c9eb552debcfd074aeea5c6/libsumo-1.24.0-cp310-cp310-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:b31515fc1000fa6d1f1dd54697ff71503dd2687dc6aad592e2604e8ee7c4c997", size = 25306262, upload-time = "2025-07-22T15:55:42.352Z" },
+    { url = "https://mirrors4.tuna.tsinghua.edu.cn/pypi/web/packages/be/05/e77e275cf85f670231fa91ee4bd4392a4d31f8230599619dc617b9cd4229/libsumo-1.24.0-cp310-cp310-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:36b079bd6400dec761b7e251da2a3616c23ec4d76bca7c1d038a1aee63b979af", size = 26367542, upload-time = "2025-07-22T15:56:11.181Z" },
+    { url = "https://mirrors4.tuna.tsinghua.edu.cn/pypi/web/packages/3c/3c/dfbf40cb0b90a410efa2b3d9ad44fc6537b47ead758de540ca95dd2a0d8e/libsumo-1.24.0-cp310-cp310-win_amd64.whl", hash = "sha256:a02cc654383a5496ea00d8b034474aa44da886af90be2cfe086bbced012b2eb0", size = 4615024, upload-time = "2025-07-22T15:56:17.727Z" },
+    { url = "https://mirrors4.tuna.tsinghua.edu.cn/pypi/web/packages/7a/cb/f0c1c8edaafaf0c3721af4445a296b80f54b51e8a5a052ffdb26a5243a89/libsumo-1.24.0-cp311-cp311-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:a969ce5efe81a0e20d69630240858d3b5aee9c7462b4ff06cd8ad73b22d82394", size = 25306164, upload-time = "2025-07-22T15:56:44.273Z" },
+    { url = "https://mirrors4.tuna.tsinghua.edu.cn/pypi/web/packages/83/03/c5390d92af0f3634535d69de317820c471ec7f4ca4ff6579516597c23f05/libsumo-1.24.0-cp311-cp311-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:bb825000cd6312d06cb89c3a883f3bc62b4f220ac3a44fe2404bf672381aae45", size = 26367848, upload-time = "2025-07-22T15:57:11.781Z" },
+    { url = "https://mirrors4.tuna.tsinghua.edu.cn/pypi/web/packages/24/55/48de57c5d73311ebc064a9cd8db34bd5e042a1eeb3362efac4735750900a/libsumo-1.24.0-cp311-cp311-win_amd64.whl", hash = "sha256:f3a167894e79a39757a7124265bd86660c4208dae1687d166bd9a00d1d334d2b", size = 4614461, upload-time = "2025-07-22T15:57:18.87Z" },
+    { url = "https://mirrors4.tuna.tsinghua.edu.cn/pypi/web/packages/9d/9a/4293cbc1cb249ecd6ccf70572ee0bce81944378bf7240437af84b3780e58/libsumo-1.24.0-cp312-cp312-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:1860eb6437f2c5e132678de7228a62d90e65f8ad8069e3e7d892640b4d1b1170", size = 25310897, upload-time = "2025-07-22T15:57:45.742Z" },
+    { url = "https://mirrors4.tuna.tsinghua.edu.cn/pypi/web/packages/bf/e5/cb69b08325f618e99ce72a98e5f71375c2f641d98104792c053a2215fe64/libsumo-1.24.0-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:4c260e3cb32a7c0cc621ea004eaefb2658624de8b47ef61c2ba70f7e5e1c54cf", size = 26376673, upload-time = "2025-07-22T15:58:13.863Z" },
+    { url = "https://mirrors4.tuna.tsinghua.edu.cn/pypi/web/packages/6e/75/a31463200fe2e6b8633b46aa9d39e9267bee054250492be76011d4454c41/libsumo-1.24.0-cp312-cp312-win_amd64.whl", hash = "sha256:a1852415fbd518b75dad2eb321e6e7758528bedf403698748857223fde9250c0", size = 4618624, upload-time = "2025-07-22T15:58:20.102Z" },
+    { url = "https://mirrors4.tuna.tsinghua.edu.cn/pypi/web/packages/1a/74/e95c6f9261c72a96c76b5cd2954c528b3fd1b6a4d0a82f56b2175b3c39f3/libsumo-1.24.0-cp313-cp313-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:19b47d499346fdd1999eb59903fcbb574728a08007268496bd077ba9671b55e2", size = 25311019, upload-time = "2025-07-22T15:58:45.376Z" },
+    { url = "https://mirrors4.tuna.tsinghua.edu.cn/pypi/web/packages/e4/b9/75094f0d406eaff0f8443c8e3434068426f77509976a661dbf5d35afd24b/libsumo-1.24.0-cp313-cp313-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:b33c49ef10748eebecff62cf5f4890a655c4e59c0ead13a067ee19978712f5c5", size = 26376691, upload-time = "2025-07-22T15:59:11.422Z" },
+    { url = "https://mirrors4.tuna.tsinghua.edu.cn/pypi/web/packages/71/09/ca348b2fa6ad4bdf8c167c72496ac59f29523793ff1bc01c900e4ceaa808/libsumo-1.24.0-cp313-cp313-win_amd64.whl", hash = "sha256:c5c80f03aa3f5ed10e853c70d1b0253880c747442a5d892a3f93bda73ba57d20", size = 4616986, upload-time = "2025-07-22T15:59:17.674Z" },
+    { url = "https://mirrors4.tuna.tsinghua.edu.cn/pypi/web/packages/ad/3f/c06a31c84984d2f60d477a74fa87301383b95f904ba0d8d71ce0ab8f7fcf/libsumo-1.24.0-cp39-cp39-macosx_15_0_universal2.whl", hash = "sha256:d390fabcf1ce6378a8433c06bd57a0c1822b227ed3d97aaf8f8b19f4d31eefc5", size = 5812852, upload-time = "2025-07-22T16:01:11.593Z" },
+    { url = "https://mirrors4.tuna.tsinghua.edu.cn/pypi/web/packages/52/c6/7a560801dff0258bc866c1a66d743bf04a3d6e28dc1690564e9b2425a670/libsumo-1.24.0-cp39-cp39-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:04f950708cf82f3298b1befebf1139eff07632b44c3fc1061911ab9dac72ec08", size = 25310097, upload-time = "2025-07-22T16:01:38.406Z" },
+    { url = "https://mirrors4.tuna.tsinghua.edu.cn/pypi/web/packages/08/31/ed61b687421b7616cd4d7dba3ffdf13098c8cdb408df6030ff4a7581137d/libsumo-1.24.0-cp39-cp39-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:0e3d08bd31521cc57765515186edf12419c645fb6384aea5b7fe1ab2f8c5c289", size = 26368348, upload-time = "2025-07-22T16:02:05.707Z" },
+    { url = "https://mirrors4.tuna.tsinghua.edu.cn/pypi/web/packages/1f/c2/04de4ebda502cda6852d55d975efe86bf7e4d83c0ebc0c806e2828adba47/libsumo-1.24.0-cp39-cp39-win_amd64.whl", hash = "sha256:f4c6cf02934aede255953103374be78bedf747436bb788f7fc03de1214ad8a50", size = 4614252, upload-time = "2025-07-22T16:02:12.863Z" },
+]
+
+[[package]]
 name = "linear-operator"
 version = "0.5.3"
 source = { registry = "https://mirrors.cernet.edu.cn/pypi/web/simple" }
@@ -2176,6 +2214,7 @@ dependencies = [
     { name = "hydra-joblib-launcher" },
     { name = "hydra-submitit-launcher" },
     { name = "imageio" },
+    { name = "libsumo" },
     { name = "mapdn" },
     { name = "matplotlib" },
     { name = "moviepy" },
@@ -2186,6 +2225,7 @@ dependencies = [
     { name = "pettingzoo", extra = ["mpe", "sisl"] },
     { name = "protobuf" },
     { name = "python-dotenv" },
+    { name = "pyvirtualdisplay" },
     { name = "pyyaml" },
     { name = "ray", extra = ["rllib"] },
     { name = "rich" },
@@ -2214,6 +2254,7 @@ requires-dist = [
     { name = "hydra-joblib-launcher", specifier = ">=1.2.0" },
     { name = "hydra-submitit-launcher", specifier = ">=1.2.0" },
     { name = "imageio", specifier = ">=2.35.1" },
+    { name = "libsumo", specifier = ">=1.24.0" },
     { name = "mapdn", editable = "packages/MAPDN" },
     { name = "matplotlib", specifier = ">=3.7.5" },
     { name = "moviepy", specifier = ">=1.0.3" },
@@ -2224,6 +2265,7 @@ requires-dist = [
     { name = "pettingzoo", extras = ["mpe", "sisl"], specifier = ">=1.24.3" },
     { name = "protobuf", specifier = "==3.20" },
     { name = "python-dotenv", specifier = ">=1.0.1" },
+    { name = "pyvirtualdisplay", specifier = ">=3.0" },
     { name = "pyyaml", specifier = ">=5.3.1" },
     { name = "ray", extras = ["rllib"], specifier = "==2.7.0" },
     { name = "rich", specifier = ">=13.9.4" },
@@ -4118,10 +4160,10 @@ provides-extras = ["all", "rendering", "testing"]
 
 [[package]]
 name = "sumolib"
-version = "1.23.1"
+version = "1.24.0"
 source = { registry = "https://mirrors.cernet.edu.cn/pypi/web/simple" }
 wheels = [
-    { url = "https://mirrors4.tuna.tsinghua.edu.cn/pypi/web/packages/aa/50/3ee7a742e7e27b87f67cfd05519f9acc2e86182b6d385fc07c41005f39eb/sumolib-1.23.1-py3-none-any.whl", hash = "sha256:63589c41079dbdb1acb389478694f47302f4990e156c056ad686ba2d01efe7f0", size = 276981, upload-time = "2025-05-08T07:31:17.919Z" },
+    { url = "https://mirrors4.tuna.tsinghua.edu.cn/pypi/web/packages/f0/35/9c524281aab9550187d638862ceb663cb2d31fe04bb630aeb109faf81432/sumolib-1.24.0-py3-none-any.whl", hash = "sha256:d4e8c0315dd240af60665cb7c0f34f876abf91daab73f53c17a5c8284c0acd5d", size = 278150, upload-time = "2025-07-22T16:02:15.915Z" },
 ]
 
 [[package]]
@@ -4512,13 +4554,13 @@ wheels = [
 
 [[package]]
 name = "traci"
-version = "1.23.1"
+version = "1.24.0"
 source = { registry = "https://mirrors.cernet.edu.cn/pypi/web/simple" }
 dependencies = [
     { name = "sumolib" },
 ]
 wheels = [
-    { url = "https://mirrors4.tuna.tsinghua.edu.cn/pypi/web/packages/bd/46/ac1c760c0ee183a316d3c1c33fb20c64b56621abafd00db99af48b96ee54/traci-1.23.1-py3-none-any.whl", hash = "sha256:79a62bdc67fb437d3bf08a730f3673bbe77435f0b36e0ff4b3111545a9d371bb", size = 277219, upload-time = "2025-05-08T07:31:35.278Z" },
+    { url = "https://mirrors4.tuna.tsinghua.edu.cn/pypi/web/packages/c3/69/e73f97bae5ff291f11e39b46f73a70b9ec7301b578f5e857786256ed3a70/traci-1.24.0-py3-none-any.whl", hash = "sha256:eb273d596d7279cbe5734ec23297e8689b78526d43089f7e21a9f3fb3de4fdea", size = 278387, upload-time = "2025-07-22T16:02:17.637Z" },
 ]
 
 [[package]]
