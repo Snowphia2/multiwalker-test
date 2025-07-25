@@ -37,7 +37,7 @@ if __name__ == "__main__":
                 route_file="packages/SUMO/sumo_rl/nets/RESCO/grid4x4/grid4x4_1.rou.xml",
                 out_csv_name="results/sumo/4x4grid/ppo",
                 use_gui=False,
-                num_seconds=80000,
+                num_seconds=3600,
             )
         ),
     )
