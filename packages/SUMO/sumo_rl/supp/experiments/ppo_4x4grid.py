@@ -38,8 +38,17 @@ if __name__ == "__main__":
                 out_csv_name="results/sumo/4x4grid/ppo",
                 use_gui=False,
                 num_seconds=3600,
+                sumo_warnings=False,
             )
         ),
+    )
+
+    from ray.air.integrations.wandb import WandbLoggerCallback
+
+    wandb_logger = WandbLoggerCallback(
+        project="sumo_harl_resco_4x4",
+        name="ppo_4x4grid",
+        group="ppo",
     )
 
     config = (
@@ -71,4 +80,5 @@ if __name__ == "__main__":
         checkpoint_freq=10,
         local_dir="/root/proj/2507-multiwalker-harl/results/ray_results1/" + env_name,
         config=config.to_dict(),
+        callbacks=[wandb_logger],
     )

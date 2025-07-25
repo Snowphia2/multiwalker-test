@@ -167,7 +167,12 @@ class SumoEnvironment(gym.Env):
 
         if LIBSUMO:
             traci.start(
-                [sumolib.checkBinary("sumo"), "-n", self._net]
+                [
+                    sumolib.checkBinary("sumo"),
+                    "-n",
+                    self._net,
+                    "--no-warnings",
+                ]
             )  # Start only to retrieve traffic light information
             conn = traci
         else:

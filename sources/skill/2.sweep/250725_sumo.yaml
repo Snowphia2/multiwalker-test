@@ -1,13 +1,13 @@
 program: sources.skill.code.train
 method: bayes
-project: sumo_harl_4x4
-name: 250721_fewer_steps
+project: sumo_harl_resco_4x4
+name: 250725_fewer_steps
 metric:
   goal: maximize
   name: eval_average_episode_rewards.max
 parameters:
   algorithm_parameters.model.lr:
-    values: [0.001, 0.0001]
+    values: [0.01, 0.001, 0.0001]
   algorithm_parameters.algo.ppo_epoch:
     values: [5, 10, 15]
   algorithm_parameters.algo.actor_num_mini_batch:
@@ -27,7 +27,7 @@ command:
   - "algorithm=mappo"
   - "environment=sumo"
   - "scenario=raw"
-  - "algorithm_parameters.train.num_env_steps=4000000"
+  - "algorithm_parameters.train.num_env_steps=1000000"
   - "algorithm_parameters.train.eval_interval=1"
   - "algorithm_parameters.train.log_interval=1"
   - ${args_no_hyphens}

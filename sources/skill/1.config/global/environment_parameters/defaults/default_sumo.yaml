@@ -10,7 +10,7 @@ out_csv_name: !!null  # 输出CSV文件名，为!!null时不生成输出
 use_gui: True  # 是否使用SUMO GUI运行仿真
 virtual_display: [3200, 1800]  # 虚拟显示分辨率
 begin_time: 0  # 仿真开始时间步（秒）
-num_seconds: 20000  # 仿真持续时间（秒）
+num_seconds: 3600  # 仿真持续时间（秒）
 max_depart_delay: -1  # 车辆插入最大延迟时间，-1表示无延迟
 waiting_time_memory: 1000  # 车辆等待时间记忆秒数
 time_to_teleport: -1  # 车辆卡住时传送到边末端的等待时间，-1表示不传送
@@ -29,6 +29,6 @@ add_system_info: true  # 是否添加系统信息
 add_per_agent_info: true  # 是否添加每个智能体的信息
 sumo_seed: "random"  # SUMO随机种子
 fixed_ts: false  # 是否使用固定交通信号
-sumo_warnings: true  # 是否显示SUMO警告
+sumo_warnings: False  # 是否显示SUMO警告
 additional_sumo_cmd: !!null  # 额外的SUMO命令行参数
 render_mode: !!null  # 渲染模式
