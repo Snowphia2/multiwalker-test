@@ -10,10 +10,7 @@ import numpy as np
 import gymnasium as gym
 
 # from pettingzoo.sisl import multiwalker_v9
-from ..harl_env_with_events import (
-    HarlEnvWithEvents,
-    Event,
-)
+from ..harl_env_with_events import HarlEnvWithEvents, Event, EnvProtocol
 
 # from pettingzoo.sisl import multiwalker_v9
 
@@ -91,7 +88,6 @@ ActionType = np.ndarray[Any, np.dtype[np.int32]]
 ObsType = np.ndarray[Any, np.dtype[Union[np.float32, np.int32]]]
 StateType = np.ndarray[Any, np.dtype[Union[np.float32, np.int32]]]
 
-
 TAgentId = str
 TArgs = dict[str, Any]
 TDeepDict = dict[TAgentId, dict[str, Any]]
@@ -100,7 +96,7 @@ ObsWrappedType = dict[TAgentId, ObsType]
 T = TypeVar("T")
 
 
-class MapdnWrapperEnv:
+class MapdnWrapperEnv(EnvProtocol):
     def __init__(self, args: MapdnEnvConfig, disturbances: list[Any]):
         self.args: MapdnEnvConfig = copy.deepcopy(args)
         dict_args = asdict(args)
@@ -217,6 +213,7 @@ class MapdnHARLEnv(
         ObsType,
         ActionType,
         StateType,
+        VoltageControl,
     ]
 ):
     events: list[Event]

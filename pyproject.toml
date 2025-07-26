@@ -42,6 +42,7 @@ dependencies = [
   "pyvirtualdisplay>=3.0",
   "libsumo>=1.24.0",
   "gdown>=5.2.0",
+  "prompt-template>=1.2.0",
 ]
 [tool.uv.sources]
 harl = { workspace = true }

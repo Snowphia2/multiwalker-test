@@ -55,13 +55,16 @@ all_multiwalkers_united = Union[
 
 TAgentId = str
 TEnv = aec_to_parallel_wrapper[str, ObsType, ActionType]
+TEnvRaw = all_multiwalkers_united
 TArgs = dict[str, Any]
 TDeepDict = dict[TAgentId, dict[str, Any]]
 ObsWrappedType = dict[TAgentId, ObsType]
 
 
 class PettingZooMWEnv(
-    HarlEnvWithEvents[TAgentId, TEnv, TArgs, ObsType, ActionType, StateType]
+    HarlEnvWithEvents[
+        TAgentId, TEnv, TArgs, ObsType, ActionType, StateType, all_multiwalkers_united
+    ]
 ):
     multiwalker_env: all_multiwalkers_united
 

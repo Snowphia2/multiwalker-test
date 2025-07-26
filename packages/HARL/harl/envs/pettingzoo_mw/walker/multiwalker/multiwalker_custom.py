@@ -298,6 +298,7 @@ class BipedalWalker(Agent):
                 return fraction
 
         lidars = [_LidarCallback() for _ in range(10)]
+        assert self.hull is not None
         pos = self.hull.position
         vel = self.hull.linearVelocity
 
@@ -491,7 +492,7 @@ class MultiWalkerEnv:
 
         return self.observe(0)
 
-    def get_thru_lidar_obs(self):
+    def get_thru_lidar_obs(self) -> list[list[np.ndarray]]:
         return [walker.get_thru_lidar_obs() for walker in self.walkers]
 
     def scroll_subroutine(self):

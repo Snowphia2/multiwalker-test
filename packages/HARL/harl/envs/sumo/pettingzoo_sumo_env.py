@@ -6,6 +6,7 @@ from typing import Any, Optional, Union
 from gymnasium import spaces
 from pettingzoo.utils import wrappers
 from pettingzoo.utils.conversions import parallel_wrapper_fn
+from sumo_rl.environment.env import SumoEnvironment
 from pettingzoo.utils.conversions import aec_to_parallel_wrapper
 import sumo_rl
 import numpy as np
@@ -16,6 +17,7 @@ import gymnasium as gym
 from ..harl_env_with_events import (
     HarlEnvWithEvents,
     Event,
+    EnvProtocol,
 )
 
 # from pettingzoo.sisl import multiwalker_v9
@@ -24,7 +26,7 @@ logging.basicConfig()
 logging.getLogger().setLevel(logging.ERROR)
 
 
-class SumoEnvironmentPZWithGlobalState(sumo_rl.SumoEnvironmentPZ):
+class SumoEnvironmentPZWithGlobalState(sumo_rl.SumoEnvironmentPZ, EnvProtocol):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.state_space = self.get_state_space()
@@ -119,6 +121,7 @@ class PettingZooSumoEnv(
         ObsType,
         ActionType,
         StateType,
+        SumoEnvironment,
     ]
 ):
     events: list[Event]

@@ -94,9 +94,12 @@ class EventManager(Generic[TEnv, TEnvRaw], ABC):
     env: TEnv
     real_env: TEnvRaw
 
+    def _get_real_env(self) -> TEnvRaw:
+        return self.real_env
+
     @abstractmethod
-    def _get_real_env(self) -> Any:
-        return self.env
+    def _extract_real_env(self) -> TEnvRaw:
+        pass
 
     def __init__(self, event_config: Event, env: TEnv):
         self.event_config = event_config
@@ -104,7 +107,7 @@ class EventManager(Generic[TEnv, TEnvRaw], ABC):
             is_active=False, started_at=0, stopped_at=0, args=None
         )
         self.env = env
-        self.real_env = self._get_real_env()
+        self.real_env = self._extract_real_env()
 
     @abstractmethod
     def _event_random_value(self) -> Any:
@@ -165,11 +168,11 @@ class EventManager(Generic[TEnv, TEnvRaw], ABC):
 
 
 class HarlEnvWithEvents(
-    Generic[TAgentId, TEnv, TArgs, ObsType, ActionType, StateType], ABC
+    Generic[TAgentId, TEnv, TArgs, ObsType, ActionType, StateType, TEnvRaw], ABC
 ):
     events: list[Event]
-    event_managers: list[EventManager]
-    event_mapping: dict[str, type[EventManager]]
+    event_managers: list[EventManager[TEnv, TEnvRaw]]
+    event_mapping: dict[str, type[EventManager[TEnv, TEnvRaw]]]
 
     max_cycles: int
     discrete: bool
@@ -299,7 +302,7 @@ class HarlEnvWithEvents(
     def get_events(self) -> list[Event]:
         return self.events
 
-    def get_event_managers(self) -> list[EventManager]:
+    def get_event_managers(self) -> list[EventManager[TEnv, TEnvRaw]]:
         return self.event_managers
 
     def trigger_event(self) -> None:
