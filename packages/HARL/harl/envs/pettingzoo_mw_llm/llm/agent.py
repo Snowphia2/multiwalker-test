@@ -14,12 +14,12 @@ import json
 # AGENT_FILES = [f for f in os.listdir(OBS_DIR) if f.endswith("_observations.csv")]
 
 # 环境与任务简介
-ENV_DESC = """环境简介：Multiwalker 
+ENV_DESC1 = """环境简介：Multiwalker 
 环境，多个双足机器人协作搬运包裹，需跨越复杂地形（如坡道、障碍等），整体向右前进
 任务简介：保持队形、稳定搬运包裹，避免掉队、拥挤和跌倒，顺利通过地形。
 当前输出说明：本帧为每50帧采样一次的观测结果。
 【你的任务】为三个小人分配策略，以速度参考值的形式。速度取值范围是[0, 0.6]
-输出格式：{"target_vs": [0.5, 0.5, 0.5]}
+输出格式：{"target_vs": [0.4, 0.4, 0.4]}
 不输出任何其他文本，只输出上述选择；不使用markdown格式。使用双引号而非单引号。
 
 * 速度参考值：0.4是正常速度，0.6是加速，0.1是减速。
@@ -32,13 +32,51 @@ ENV_DESC = """环境简介：Multiwalker
 1. 前进=向右。agent0在最左侧、agent2在最右侧。
 2. 核心思路是维持三个机器人的相对距离比较稳定。
 2.1 首先关注自然就是是否出现拥挤和掉队的提示。
-2.1.1 如果某个机器人掉队了，请右侧的机器人慢下来等等它，它和它左侧的机器人一起加速赶一赶；
-2.1.2 如果某两个机器人拥挤了，那右侧的机器人们都走快点，左侧的机器人们都走慢点。
-2.2 如果出现特殊地形，考虑地形会对机器人行进速度的影响。例如如果在上坡，上坡的机器人的参考速度不变的情况下、实际的横向位移速度会变慢，那此时其他的机器人就应该走慢一点配合它、这个上坡中的机器人应该走快点。
+2.1.1 如果某个机器人掉队了，请右侧的机器人慢下来等等它（调整到0.1），它和它左侧的机器人一起加速赶一赶（调整到0.6）；
+2.1.2 如果某两个机器人拥挤了，那右侧的机器人们都走快点（调整到0.6），左侧的机器人们都走慢点（调整到0.1）。
+2.2 如果出现特殊地形，考虑地形会对机器人行进速度的影响。例如如果在上坡，上坡的机器人的参考速度不变的情况下、实际的横向位移速度会变慢，那此时其他不在上坡的机器人就应该走慢一点（0.2）、这个上坡中的机器人应该走快点（0.6）。
 2.3 拥挤和掉队应该优先于地形考虑；就算某个机器人在上坡，如果右侧机器人和这个上坡机器人拥挤了，右侧机器人也应该走快一点。
-3. 如果没有上述情况，都选择正常策略[0.5, 0.5, 0.5]
+3. 如果没有上述情况，都选择正常策略[0.4, 0.4, 0.4]
+* 速度参考值：0.4是正常速度，0.6是加速，0.1是减速。
 
 ## 信息
+"""
+
+ENV_DESC = """
+你需要为Multiwalker环境中的三个双足机器人分配速度参考值，以实现它们保持队形、稳定搬运包裹，避免掉队、拥挤和跌倒，顺利通过复杂地形的任务。整体环境是多个双足机器人协作搬运一根长条包裹，需跨越复杂地形（如坡道、障碍等）并整体向右前进。
+
+### 参考信息
+1. 包裹是一根长条。
+2. 相对包裹偏移值是相对包裹中心点，如果绝对值在0.5以内，说明还支撑着包裹；
+3. 机器人与杆子的绝对距离不应大于0.4。
+4. Agent0在左侧，Agent1在中间，Agent2在右侧。
+
+### 策略机制
+1. 前进方向为向右，agent0在最左侧、agent2在最右侧。
+2. 核心思路是维持三个机器人的相对距离比较稳定，同时保证机器人与杆子的绝对距离不大于0.4。
+    - 首先关注是否出现拥挤和掉队的提示：
+        - 如果某个机器人掉队了，它右侧的所有机器人减速到0.1，它和它左侧的机器人加速到0.7。
+        - 如果某两个机器人拥挤了，右侧的所有机器人加速到0.7，左侧的所有机器人们都减速到0.1。
+        - 如果某两个机器人之间的距离大于0.5：右侧所有机器人减速到0.0，直到该距离变小到0.35以内，左侧机器人视情况加速。
+    - 若某个机器人与杆子的绝对距离大于0.4：
+        - 如果机器人的x坐标大于杆子的x坐标，则偏移值为正、说明机器人在杆子右侧。
+        - 如果该机器人在杆子左侧，它应该加速到0.7，它右侧的所有机器人减速到0.1。
+        - 如果该机器人在杆子右侧，它应该减速到0.1，它左侧的所有机器人加速到0.7。
+    - 如果出现特殊地形，考虑地形会对机器人行进速度的影响。
+        - 如果某个机器人在上坡，它应该加速到0.7，它左侧不在上坡的机器人减速到0.3，它右侧不在上坡的机器人减速到0.0.
+    - 冲突处理：
+        - 拥挤和掉队 和 机器人与杆子绝对距离过大的情况：应该优先于地形考虑；
+3. 如果没有上述情况，都选择正常策略[0.4, 0.4, 0.4]。
+
+### 速度参考值说明
+0.4是正常速度，0.7是加速，0.1是减速。
+
+请根据上述信息为三个机器人分配速度参考值，输出格式为：{"target_vs": [0.4, 0.4, 0.4]}，不输出任何其他文本，只输出上述选择；不使用markdown格式，使用双引号而非单引号。
+
+
+## 信息
+当前提供的是每50帧采样一次的观测结果：
+
 """
 # 计算agent在队伍中的相对位置
 # offset_x越大越靠右，越小越靠左
@@ -66,27 +104,25 @@ def semantic_observation(row, slope_info=None):
     )
     # x偏移
     px = row["package_x_offset"]
-    lines.append(
-        f"相对包裹X偏移: {px:.2f}（0为最左，1为最右，单位: 归一化，包裹参考系）"
-    )
+    lines.append(f"相对杆子中心点的delta X: {-px:.2f}")
     # LIDAR
     lidar_vals = [float(row[f"lidar_{j}"]) for j in range(10)]
     lidar_avg = np.mean(lidar_vals)
     lidar_min = np.min(lidar_vals)
     lidar_max = np.max(lidar_vals)
     lidar_range = lidar_max - lidar_min
-    lines.append(
-        f"LIDAR距离: 平均{lidar_avg:.2f}米，最小{lidar_min:.2f}米，最大{lidar_max:.2f}米，范围{lidar_range:.2f}米"
-    )
+    # lines.append(
+    #     f"LIDAR距离: 平均{lidar_avg:.2f}米，最小{lidar_min:.2f}米，最大{lidar_max:.2f}米，范围{lidar_range:.2f}米"
+    # )
     # 统计坡道信息
-    if slope_info:
-        lines.append(
-            f"坡道检测统计: delta_y均值{(slope_info.get('avg_delta_y') or 0):.4f}，最大{(slope_info.get('max_delta_y') or 0):.4f}，最小{(slope_info.get('min_delta_y') or 0):.4f}，范围{(slope_info.get('height_range') or 0):.4f}，上坡通道数{(slope_info.get('total_uphill_channels') or 0)}"
-        )
-        lines.append(
-            f"近距离LIDAR通道（<0.2米）: {slope_info.get('near_channels', [])}"
-        )
-        lines.append(f"远距离LIDAR通道（>0.8米）: {slope_info.get('far_channels', [])}")
+    # if slope_info:
+    #     lines.append(
+    #         f"坡道检测统计: delta_y均值{(slope_info.get('avg_delta_y') or 0):.4f}，最大{(slope_info.get('max_delta_y') or 0):.4f}，最小{(slope_info.get('min_delta_y') or 0):.4f}，范围{(slope_info.get('height_range') or 0):.4f}，上坡通道数{(slope_info.get('total_uphill_channels') or 0)}"
+    #     )
+    #     lines.append(
+    #         f"近距离LIDAR通道（<0.2米）: {slope_info.get('near_channels', [])}"
+    #     )
+    #     lines.append(f"远距离LIDAR通道（>0.8米）: {slope_info.get('far_channels', [])}")
     return "\n".join(lines)
 
 
@@ -110,10 +146,15 @@ def initial_judgement(row, prev_row=None):
             px_warn = f"\n- x偏移突变{delta_px:.2f}，需注意。"
     # package_x_offset 只判断是否离开包裹
     if px > 0.5 or px < -0.5:
-        px_warn += f"\n- 已离开包裹({px:.2f})，有脱离风险。"
+        px_warn += f"\n- 已离开包裹({-px:.2f})，有脱离风险。"
     # 掉队/拥挤风险判断
     left_offset = row.get("left_neighbor_x_offset", 0)
     right_offset = row.get("right_neighbor_x_offset", 0)
+    px_warn += "\n"
+    if left_offset != 0:
+        px_warn += f"- 左侧与邻居距离{abs(left_offset):.2f}"
+    if right_offset != 0:
+        px_warn += f"- 右侧与邻居距离{abs(right_offset):.2f}"
     neighbor_warn = ""
     # 掉队风险（左侧距离大，且不是最左边）
     if left_offset == 0:
@@ -321,7 +362,7 @@ def generate_prompt(
         agent_rows[agent_id] = row
         # prev_agent_rows[agent_id] = None  # 没有历史
     prompt = [
-        ENV_DESC,
+        # ENV_DESC,
     ]
     for agent_id, row in agent_rows.items():
         slope_info = row.get("slope_info", None)
@@ -337,6 +378,8 @@ def generate_prompt(
         prompt.append("当前输出说明：本帧为每30帧采样一次的观测结果。\n")
     if ref_v is not None:
         prompt.append(f"当前的目标速度：{json.dumps(ref_v)}")
+    # print("prompt: ", "\n".join(prompt))
+    prompt = [ENV_DESC, "\n".join(prompt)]
     return "\n".join(prompt)
 
 

@@ -1,5 +1,7 @@
 name: raw
 desc: 初始场景
 
+# vanilla
 env_tweak:
+  terrain_config: [{'type': 'terrain', 'length': 35}, {'type': 'up', 'length': 5, 'angle': 10}, {'type': 'terrain', 'length': 200}]
   n_walkers: 3

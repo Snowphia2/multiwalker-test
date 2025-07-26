@@ -39,7 +39,7 @@ disturbances:
   #     speed: 0.1
 
   - name: skill_move_speed
-    start_at: 800
+    start_at: 1300
     end_at: 1000
     disturbance_args:
       speed: 0.8

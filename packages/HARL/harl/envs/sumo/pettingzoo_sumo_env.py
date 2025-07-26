@@ -22,8 +22,8 @@ from ..harl_env_with_events import (
 
 # from pettingzoo.sisl import multiwalker_v9
 
-logging.basicConfig()
-logging.getLogger().setLevel(logging.ERROR)
+# 设置日志级别为WARNING，避免输出debug信息
+logging.basicConfig(level=logging.WARNING)
 
 
 class SumoEnvironmentPZWithGlobalState(sumo_rl.SumoEnvironmentPZ, EnvProtocol):

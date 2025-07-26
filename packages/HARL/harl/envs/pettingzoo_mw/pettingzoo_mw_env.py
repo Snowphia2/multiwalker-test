@@ -34,7 +34,7 @@ from .walker.multiwalker.multiwalker_custom import MultiWalkerEnv as _env_custom
 from .walker.multiwalker.mw_move import MultiWalkerEnv as _env_move
 
 logging.basicConfig()
-logging.getLogger().setLevel(logging.DEBUG)
+logging.getLogger().setLevel(logging.WARNING)
 
 
 ActionType = np.ndarray[(4,), np.dtype[np.float32]]  # shape=(4,), dtype=np.float32

@@ -97,7 +97,7 @@ class LLMManager(ABC, Generic[TEnv, TEnvRaw, ObsType, StateType]):
         prompt, semantic_infos, prompt_template = self.translate_obses(
             obses, global_state
         )
-        print(f"prompt: {prompt}")
+        # print(f"prompt: {prompt}")
         return self.get_llm_response(prompt)
 
     def get_llm_response(self, prompt: str) -> str:
@@ -105,6 +105,7 @@ class LLMManager(ABC, Generic[TEnv, TEnvRaw, ObsType, StateType]):
             response = self.llm_client.chat.completions.create(
                 model=self.llm_config.model,
                 messages=[{"role": "user", "content": prompt}],
+                temperature=0.1,
             )
             result = response.choices[0].message.content
             assert result is not None, "llm response is None"

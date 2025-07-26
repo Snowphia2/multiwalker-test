@@ -83,7 +83,7 @@ def export_gif(config_name, frames_arr, rewards_arr):
         imageio.mimwrite(
             gif_path,
             frames,
-            duration=len(frames) / 3,
+            duration=10,
         )
 
         # 3. 视频生成

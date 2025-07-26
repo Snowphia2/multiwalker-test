@@ -84,71 +84,71 @@ def advanced_slope_detection(
             info = f"坡剩余约{remain_length}米"
         else:
             info = "坡上，尚未检测到坡尾"
-    elif (
-        delta_ys
-        and any(dy > delta_y_thresh for dy in delta_ys)
-        and len(delta_delta_ys) > 0
-        and any(dd > 0.00005 for dd in delta_delta_ys)
-    ):
-        status = "检测到有坡"
-        idxs = [i for i, dy in enumerate(delta_ys) if dy > delta_y_thresh]
-        info_list = []
-        if len(idxs) >= 2:
-            # 用所有满足条件的通道，两两计算角度，最后平均angle为最终坡度
-            angles = []
-            for i in range(len(idxs)):
-                for j in range(i + 1, len(idxs)):
-                    idx1, idx2 = idxs[i], idxs[j]
-                    dx = channel_data[idx2]["distance"] - channel_data[idx1]["distance"]
-                    dy = delta_ys[idx2] - delta_ys[idx1]
-                    if dx != 0:
-                        angle = math.atan2(dy, dx)
-                        angles.append(angle)
+    # elif (
+    #     delta_ys
+    #     and any(dy > delta_y_thresh for dy in delta_ys)
+    #     and len(delta_delta_ys) > 0
+    #     and any(dd > 0.00005 for dd in delta_delta_ys)
+    # ):
+    #     status = "检测到有坡"
+    #     idxs = [i for i, dy in enumerate(delta_ys) if dy > delta_y_thresh]
+    #     info_list = []
+    #     if len(idxs) >= 2:
+    #         # 用所有满足条件的通道，两两计算角度，最后平均angle为最终坡度
+    #         angles = []
+    #         for i in range(len(idxs)):
+    #             for j in range(i + 1, len(idxs)):
+    #                 idx1, idx2 = idxs[i], idxs[j]
+    #                 dx = channel_data[idx2]["distance"] - channel_data[idx1]["distance"]
+    #                 dy = delta_ys[idx2] - delta_ys[idx1]
+    #                 if dx != 0:
+    #                     angle = math.atan2(dy, dx)
+    #                     angles.append(angle)
 
-            if angles:
-                # 计算平均角度
-                avg_angle = np.mean(angles)
-                slope_deg = round(avg_angle * 180 / math.pi, 2)
+    #         if angles:
+    #             # 计算平均角度
+    #             avg_angle = np.mean(angles)
+    #             slope_deg = round(avg_angle * 180 / math.pi, 2)
 
-                # 坡长计算：取最大和最小distance的差值
-                idx_min = min(idxs, key=lambda i: channel_data[i]["distance"])
-                idx_max = max(idxs, key=lambda i: channel_data[i]["distance"])
-                slope_length = round(
-                    abs(
-                        channel_data[idx_max]["distance"]
-                        - channel_data[idx_min]["distance"]
-                    ),
-                    2,
-                )
+    #             # 坡长计算：取最大和最小distance的差值
+    #             idx_min = min(idxs, key=lambda i: channel_data[i]["distance"])
+    #             idx_max = max(idxs, key=lambda i: channel_data[i]["distance"])
+    #             slope_length = round(
+    #                 abs(
+    #                     channel_data[idx_max]["distance"]
+    #                     - channel_data[idx_min]["distance"]
+    #                 ),
+    #                 2,
+    #             )
 
-                info_list.append(f"坡度约{slope_deg}°，坡长约{slope_length}米")
-            else:
-                info_list.append("坡度信息不足")
+    #             info_list.append(f"坡度约{slope_deg}°，坡长约{slope_length}米")
+    #         else:
+    #             info_list.append("坡度信息不足")
 
-            # 额外输出坡起点真实水平距离
-            idx_min = min(idxs, key=lambda i: channel_data[i]["distance"])
-            theta_min = calculate_theta(idx_min)
-            x_min = channel_data[idx_min]["distance"]
-            dy_min = channel_data[idx_min]["height_diff"]
-            if math.tan(theta_min) != 0:
-                x_start = x_min - dy_min / math.tan(theta_min)
-                info_list.append(f"坡起点水平距离约{round(x_start, 2)}米")
-            else:
-                info_list.append("坡起点水平距离计算异常")
-        elif len(idxs) == 1:
-            # 只有一个通道检测到坡，无法算坡度，只能估算坡起点真实水平距离
-            i1 = idxs[0]
-            theta1 = calculate_theta(i1)
-            x1 = channel_data[i1]["distance"]
-            dy1 = channel_data[i1]["height_diff"]
-            if math.tan(theta1) != 0:
-                x_start = x1 - dy1 / math.tan(theta1)
-                info_list.append(f"坡起点水平距离约{round(x_start, 2)}米")
-            else:
-                info_list.append("坡起点水平距离计算异常")
-        else:
-            info_list.append("坡信息不足")
-        info = "，".join(info_list)
+    #         # 额外输出坡起点真实水平距离
+    #         idx_min = min(idxs, key=lambda i: channel_data[i]["distance"])
+    #         theta_min = calculate_theta(idx_min)
+    #         x_min = channel_data[idx_min]["distance"]
+    #         dy_min = channel_data[idx_min]["height_diff"]
+    #         if math.tan(theta_min) != 0:
+    #             x_start = x_min - dy_min / math.tan(theta_min)
+    #             info_list.append(f"坡起点水平距离约{round(x_start, 2)}米")
+    #         else:
+    #             info_list.append("坡起点水平距离计算异常")
+    #     elif len(idxs) == 1:
+    #         # 只有一个通道检测到坡，无法算坡度，只能估算坡起点真实水平距离
+    #         i1 = idxs[0]
+    #         theta1 = calculate_theta(i1)
+    #         x1 = channel_data[i1]["distance"]
+    #         dy1 = channel_data[i1]["height_diff"]
+    #         if math.tan(theta1) != 0:
+    #             x_start = x1 - dy1 / math.tan(theta1)
+    #             info_list.append(f"坡起点水平距离约{round(x_start, 2)}米")
+    #         else:
+    #             info_list.append("坡起点水平距离计算异常")
+    #     else:
+    #         info_list.append("坡信息不足")
+    #     info = "，".join(info_list)
     # 正在上坡：有多组deltay，且delta_delta_y接近0（平台期）
     elif delta_ys and any(abs(dy) < delta_y_thresh for dy in delta_ys):
         status = "平地"
