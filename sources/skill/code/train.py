@@ -14,7 +14,7 @@ def _to_dict(cfg1) -> dict:
         cfg1, resolve=True, throw_on_missing=True
     )
     if type(dict_result) is not dict:
-        raise ValueError("dict_result is not a dict")
+        raise ValueError("dict_result is not a dict nor list")
     return dict_result
 
 
@@ -32,9 +32,10 @@ def _to_harl_dict(
     # 1.1 生成run_name
     run_name = f"[{algorithm_name}]<{scenario_name}>"
     env_tweaks = cfg.environment.env_tweak
-    for key in env_tweaks.tweak_types:
-        if not key.startswith("_"):
-            run_name += f"<{key}={_to_dict(env_tweaks)[key]}>"
+    if hasattr(env_tweaks, "tweak_types"):
+        for key in env_tweaks.tweak_types:
+            if not key.startswith("_"):
+                run_name += f"<{key}={_to_dict(env_tweaks)[key]}>"
 
     # 1.2 生成wandb_group 和 save_group
     now_time = datetime.now().strftime("%m%d/%H%M")
@@ -60,17 +61,22 @@ def _to_harl_dict(
         from .types.environment.type_multiwalker import multiwalker_customize_dict
 
         algo_dict, env_dict = multiwalker_customize_dict(cfg, algo_dict, env_dict)
-    elif env_name == "pettingzoo_sumo":
+    elif env_name == "sumo":
         from .types.environment.type_sumo import sumo_customize_dict
 
         algo_dict, env_dict = sumo_customize_dict(cfg, algo_dict, env_dict, save_group)
+    elif env_name == "mapdn":
+        from harl.envs.mapdn.mapdn_types import mapdn_customize_dict
+
+        algo_dict, env_dict = mapdn_customize_dict(cfg, algo_dict, env_dict, save_group)
 
     # 1.4 执行env_tweak
     # 1.5 执行scenario
-    env_tweak = _to_dict(cfg.environment.env_tweak)
-    for key in env_tweak.keys():
-        if not key.startswith("_") and key != "tweak_types":
-            env_dict[key] = env_tweak[key]
+    if cfg.environment.env_tweak is not None:
+        env_tweak = _to_dict(cfg.environment.env_tweak)
+        for key in env_tweak.keys():
+            if not key.startswith("_") and key != "tweak_types":
+                env_dict[key] = env_tweak[key]
     if cfg.environment_scenario is not None:
         env_dict.update(_to_dict(cfg.environment_scenario))
 

@@ -8,8 +8,9 @@ from harl.envs.football.football_logger import FootballLogger
 from harl.envs.dexhands.dexhands_logger import DexHandsLogger
 from harl.envs.lag.lag_logger import LAGLogger
 from harl.envs.pettingzoo_mw.pettingzoo_mw_logger import PettingZooMWLogger
-from harl.envs.pettingzoo_sumo.pettingzoo_sumo_logger import PettingZooSumoLogger
+from harl.envs.sumo.pettingzoo_sumo_logger import PettingZooSumoLogger
 from harl.envs.pettingzoo_mw_llm.pettingzoo_mw_llm_logger import PettingZooMWLLMLogger
+from harl.envs.mapdn.mapdn_logger import MAPDNLogger
 
 FLAGS = flags.FLAGS
 FLAGS(["train_sc.py"])
@@ -25,5 +26,6 @@ LOGGER_REGISTRY = {
     "lag": LAGLogger,
     "pettingzoo_mw": PettingZooMWLogger,
     "pettingzoo_mw_llm": PettingZooMWLLMLogger,
-    "pettingzoo_sumo": PettingZooSumoLogger,
+    "sumo": PettingZooSumoLogger,
+    "mapdn": MAPDNLogger,
 }

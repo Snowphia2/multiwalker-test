@@ -1,4 +1,4 @@
-name: pettingzoo_sumo
+name: sumo
 
 env_tweak: 
   tweak_types: []

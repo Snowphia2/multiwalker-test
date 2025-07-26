@@ -1,6 +1,6 @@
 program: sources.skill.code.train
 method: bayes
-project: harl_full_sweep
+project: harl_mapdn_ppo_sweep
 name: 250723_mappo_happo
 metric:
   goal: maximize
@@ -11,9 +11,9 @@ parameters:
   algorithm_parameters.algo.ppo_epoch:
     values: [5, 10, 15]
   algorithm_parameters.algo.actor_num_mini_batch:
-    values: [1, 2, 4]
+    values: [1, 2]
   algorithm:
-    values: [hasac]
+    values: [mappo, happo]
 command:
   - ${env}
   - uv
@@ -26,6 +26,6 @@ command:
   - "model.save_group=latest"
   - "scenario=raw"
   - "environment=mapdn"
-  - "++algorithm_parameters.train.n_rollout_threads=20"
-  - "algorithm_parameters.train.num_env_steps=30000000"
+  - "++algorithm_parameters.train.n_rollout_threads=1"
+  - "algorithm_parameters.train.num_env_steps=96000"
   - ${args_no_hyphens}

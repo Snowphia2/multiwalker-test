@@ -61,8 +61,10 @@ def get_task_name(env, env_args):
             task = f"{env_args['scenario']}-discrete"
     elif env == "pettingzoo_mw":
         task = "multiwalker"
-    elif env == "pettingzoo_sumo":
+    elif env == "sumo":
         task = "sumo"
+    elif env == "mapdn":
+        task = "mapdn"
     elif env == "gym":
         task = env_args["scenario"]
     elif env == "football":
