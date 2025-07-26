@@ -1,3 +1,4 @@
 name: mapdn
 
-env_tweak: !!null
+env_tweak: 
+  max_cycles: 240

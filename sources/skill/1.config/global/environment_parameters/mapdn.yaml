@@ -4,3 +4,5 @@ defaults:
 
 voltage_barrier_type: bowl
 mode: distributed
+
+max_cycles: 240
