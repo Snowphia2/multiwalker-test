@@ -14,7 +14,7 @@ from harl.runners.on_policy_ma_runner import OnPolicyMARunner
 import json
 import atexit
 from harl.envs.pettingzoo_mw.pettingzoo_mw_logger import PettingZooMWLogger
-from moviepy.editor import VideoFileClip
+from moviepy.video.io.VideoFileClip import VideoFileClip
 import imageio
 from typing import cast
 
@@ -83,7 +83,7 @@ def export_gif(config_name, frames_arr, rewards_arr):
         imageio.mimwrite(
             gif_path,
             frames,
-            duration=10,
+            duration=len(frames) / 3,
         )
 
         # 3. 视频生成
@@ -133,7 +133,7 @@ def eval(
     name_suffix = ""
     rich.print(config.environment.env_tweak.tweak_types)
     tweak_types = config.environment.env_tweak.tweak_types
-    if env_name == "pettingzoo_mw":
+    if env_name == "pettingzoo_mw" or env_name == "pettingzoo_mw_llm":
         tweak_types = ["n_walkers", *sorted(config.environment.env_tweak.tweak_types)]
     env_tweaks = _to_dict(config.environment.env_tweak)
     for key in tweak_types:

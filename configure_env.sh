@@ -4,7 +4,7 @@
 uv sync
 
 # pettingzoo warns when action is out of bound. it is annoying.
-sed -i '60,62 s/^/        # /' .venv/lib/python3.9/site-packages/pettingzoo/utils/env_logger.py
+sed -i '60,62 s/^/        # /' .venv/lib/python3.11/site-packages/pettingzoo/utils/env_logger.py
 
 # Install SUMO
 apt update

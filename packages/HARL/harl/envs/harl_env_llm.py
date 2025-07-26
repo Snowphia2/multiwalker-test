@@ -97,6 +97,7 @@ class LLMManager(ABC, Generic[TEnv, TEnvRaw, ObsType, StateType]):
         prompt, semantic_infos, prompt_template = self.translate_obses(
             obses, global_state
         )
+        print(f"prompt: {prompt}")
         return self.get_llm_response(prompt)
 
     def get_llm_response(self, prompt: str) -> str:
@@ -141,14 +142,17 @@ class LLMManager(ABC, Generic[TEnv, TEnvRaw, ObsType, StateType]):
 
 
 class HarlEnvWithLLM(
-    HarlEnvWithEvents[TAgentId, TEnv, TArgs, ObsType, ActionType, StateType, TEnvRaw]
+    HarlEnvWithEvents[TAgentId, TEnv, TArgs, ObsType, ActionType, StateType, TEnvRaw],
+    ABC,
 ):
     llm_manager: LLMManager[TEnv, TEnvRaw, ObsType, StateType]
     llm_frequency: int
 
     def __init__(self, *args, **kwargs):
+        """实际使用里这个__init__不会被调用，这只是一个参考代码而已"""
         super().__init__(*args, **kwargs)
         self.llm_manager = self._init_llm_manager()
+        self.llm_frequency = 50
 
     @abstractmethod
     def _init_llm_manager(self) -> LLMManager[TEnv, TEnvRaw, ObsType, StateType]:
