@@ -8,7 +8,7 @@ sed -i '60,62 s/^/        # /' .venv/lib/python3.9/site-packages/pettingzoo/util
 
 # Install SUMO
 apt update
-apt install software-properties-common -y
+apt install software-properties-common -y # <- this step needs an [enter] to proceed
 add-apt-repository ppa:sumo/stable
 apt-get update
 apt-get install sumo sumo-tools sumo-doc -y
