@@ -79,6 +79,10 @@ class MapdnEnvConfig:
         "case322_3min_final",
     ] = "case33_3min_final"
 
+    test_day: int = 180
+    test_hour: int = 23
+    test_quarter: int = 2
+
     def __post_init__(self):
         if self.data_path[-1] != "/":
             self.data_path += "/"
@@ -224,7 +228,7 @@ class MapdnHARLEnv(
     agents: list[TAgentId]
     _seed: int
 
-    def __init__(self, args: MapdnEnvConfig):
+    def __init__(self, args: MapdnEnvConfig, is_eval: bool = False):
         self.args: MapdnEnvConfig = copy.deepcopy(args)
 
         self.discrete: bool = False
@@ -251,6 +255,12 @@ class MapdnHARLEnv(
 
         super().__init__(args)
 
+        # if is_eval:
+        #     self.env.real_env.manual_reset(
+        #         args.test_day, args.test_hour, args.test_quarter
+        #     )
+        #     print("if this got printed, then the manual_reset is called")
+
     def _init_event_mapping(self) -> None:
         from .events.load_change import LoadChangeEventManager
 
@@ -275,11 +285,16 @@ class MapdnHARLEnv(
         """
         return local_obs, global_state, rewards, dones, infos, available_actions
         """
-
-        obs, rew, term, trunc, info = self.env.step(actions.flatten().tolist())  # type: ignore
-        # 这里的析构是aec_to_parallel_wrapper负责的
-        print(self.cur_step)
         self.cur_step += 1
+        print("cur_step", self.cur_step)
+        acts = actions.flatten().tolist()
+        if self.cur_step >= 101:
+            acts = [1] * self.n_agents
+        # print("actions", acts)
+        obs, rew, term, trunc, info = self.env.step(acts)  # type: ignore
+        # print("info", info)
+        print("if this got printed, then the step is called and not error")
+        # 这里的析构是aec_to_parallel_wrapper负责的
         if self.cur_step == self.max_cycles:
             trunc = {agent: True for agent in self.agents}
             for agent in self.agents:
@@ -288,7 +303,8 @@ class MapdnHARLEnv(
         global_state = self.wrap(self.repeat(self.global_state))
         total_reward: float = sum([rew[agent] for agent in self.agents])
         rewards: list[list[float]] = [[total_reward]] * self.n_agents
-        self.trigger_event()  # 特殊，要先执行
+        self.trigger_event()
+
         return (
             self.unwrap(obs),
             self.unwrap(global_state),

@@ -20,18 +20,20 @@ class LoadChangeEventManager(MapdnEventManager):
         self.event_args = dacite.from_dict(LoadChangeEventArgs, args)
 
         self._prepare_env()
-
+        print("before load change: \n", self.real_env.powergrid.load["q_mvar"])
         self.real_env.powergrid.load["q_mvar"] = (
             self.real_env.powergrid.load["q_mvar"] * self.event_args.multiplier
         )
+        print("after load change: \n", self.real_env.powergrid.load["q_mvar"])
 
     def _event_stop(self) -> None:
-        self._prepare_env()
+        # self._prepare_env()
 
-        assert self.event_args is not None
-        self.real_env.powergrid.load["q_mvar"] = (
-            self.real_env.powergrid.load["q_mvar"] / self.event_args.multiplier
-        )
+        # assert self.event_args is not None
+        # self.real_env.powergrid.load["q_mvar"] = (
+        #     self.real_env.powergrid.load["q_mvar"] / self.event_args.multiplier
+        # )
+        pass
 
     def _event_random_value(self) -> Any:
         assert self.event_status.args is not None

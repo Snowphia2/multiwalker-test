@@ -196,7 +196,7 @@ def make_eval_env(env_name, seed, n_threads, env_args):
                 from harl.envs.mapdn.mapdn_env import MapdnHARLEnv, MapdnEnvConfig
 
                 env_args1 = from_dict(MapdnEnvConfig, env_args)
-                env = MapdnHARLEnv(env_args1)
+                env = MapdnHARLEnv(env_args1, is_eval=True)
             elif env_name == "pettingzoo_mw_llm":
                 from harl.envs.pettingzoo_mw_llm.pettingzoo_mw_llm_env import (
                     PettingZooMWLLMEnv,

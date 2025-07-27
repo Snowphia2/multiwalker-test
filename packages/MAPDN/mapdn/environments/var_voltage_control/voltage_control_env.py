@@ -696,8 +696,8 @@ class VoltageControl(MultiAgentEnv):
         self.powergrid.sgen["q_mvar"] = self._clip_reactive_power(
             actions, self.powergrid.sgen["p_mw"]
         )
-
-        # print(f"q_mvar: {self.powergrid.sgen['q_mvar']}")
+        print("now actions are: \n", actions)
+        print(f"q_mvar: {self.powergrid.sgen['q_mvar']}")
         # solve power flow to get the latest voltage with new reactive power and old deamnd and PV active power
         try:
             pp.runpp(self.powergrid)
@@ -706,11 +706,11 @@ class VoltageControl(MultiAgentEnv):
             print("The power flow for the reactive power penetration cannot be solved.")
             print(ppException)
             print("This is the actions: \n", actions)
-            # print(f"This is the pv: \n{self.powergrid.sgen['p_mw']}")
-            # print(f"This is the q: \n{self.powergrid.sgen['q_mvar']}")
-            # print(f"This is the active demand: \n{self.powergrid.load['p_mw']}")
-            # print(f"This is the reactive demand: \n{self.powergrid.load['q_mvar']}")
-            # print(f"This is the res_bus: \n{self.powergrid.res_bus}")
+            print(f"This is the pv: \n{self.powergrid.sgen['p_mw']}")
+            print(f"This is the q: \n{self.powergrid.sgen['q_mvar']}")
+            print(f"This is the active demand: \n{self.powergrid.load['p_mw']}")
+            print(f"This is the reactive demand: \n{self.powergrid.load['q_mvar']}")
+            print(f"This is the res_bus: \n{self.powergrid.res_bus}")
             return False
 
     def _clip_reactive_power(self, reactive_actions, active_power):
