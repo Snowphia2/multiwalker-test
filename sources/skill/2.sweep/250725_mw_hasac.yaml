@@ -7,17 +7,17 @@ metric:
   name: eval_average_episode_rewards.max
 parameters:
   algorithm_parameters.model.lr:
-    values: [5e-4, 1e-3]
+    values: [1e-3]
   algorithm_parameters.model.critic_lr:
     values: [5e-4, 1e-3]
   algorithm_parameters.algo.alpha:
-    values: [0.2, 1e-3, 5e-3]
+    values: [1e-3, 5e-3]
   algorithm_parameters.algo.batch_size:
-    values: [1000, 2000]
+    values: [1000]
   algorithm_parameters.algo.n_step:
-    values: [5, 10, 20]
+    values: [10, 20]
   algorithm_parameters.algo.gamma:
-    values: [0.95, 0.99]
+    values: [0.99]
   algorithm:
     values: [hasac]
 command:
