@@ -252,7 +252,11 @@ class MapdnHARLEnv(
         super().__init__(args)
 
     def _init_event_mapping(self) -> None:
-        pass
+        from .events.load_change import LoadChangeEventManager
+
+        self.event_mapping = {
+            "load_change": LoadChangeEventManager,
+        }
 
     @property
     def global_state(self) -> StateType:
@@ -271,9 +275,10 @@ class MapdnHARLEnv(
         """
         return local_obs, global_state, rewards, dones, infos, available_actions
         """
+
         obs, rew, term, trunc, info = self.env.step(actions.flatten().tolist())  # type: ignore
         # 这里的析构是aec_to_parallel_wrapper负责的
-
+        print(self.cur_step)
         self.cur_step += 1
         if self.cur_step == self.max_cycles:
             trunc = {agent: True for agent in self.agents}
@@ -283,7 +288,7 @@ class MapdnHARLEnv(
         global_state = self.wrap(self.repeat(self.global_state))
         total_reward: float = sum([rew[agent] for agent in self.agents])
         rewards: list[list[float]] = [[total_reward]] * self.n_agents
-        # self.trigger_event()
+        self.trigger_event()  # 特殊，要先执行
         return (
             self.unwrap(obs),
             self.unwrap(global_state),

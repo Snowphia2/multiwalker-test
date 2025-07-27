@@ -126,6 +126,8 @@ def eval(
         env_folder = "multiwalker"
     elif env_name == "sumo":
         env_folder = "sumo"
+    elif env_name == "mapdn":
+        env_folder = "mapdn"
     model_path = f"./results/models/{save_group}/{env_name}/{env_folder}/{algorithm_name}/[{algorithm_name}]<{scenario_name}>"
     rich.print(f"Loading model from {model_path}")
 
