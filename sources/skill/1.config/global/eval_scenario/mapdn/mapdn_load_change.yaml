@@ -9,7 +9,7 @@ events:
       event_value:
         type: given
         given_value:
-          multiplier: 10
+          multiplier: 12
     should_trigger_by_random: false
     random_trigger_args: !!null
     lasting: true
