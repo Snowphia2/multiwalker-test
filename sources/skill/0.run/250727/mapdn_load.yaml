@@ -18,6 +18,7 @@ steps:
     multirun: False
     config_name: mapdn
     args:
+      - algorithm=happo
       - ++environment.env_tweak.tweak_types=[]
       - eval_scenario=mapdn/mapdn_load_change
 hydra:

@@ -293,12 +293,13 @@ def eval(
         # 2.1 计算提前摔倒的次数
         terminate_cnt = 0
         package_x = []
+        early_terminate_arr = []
         for i in range(len(terminate_arr)):
             if (
                 terminate_arr[i] + 2 < config.environment.env_tweak.max_cycles
             ):  # +2 去除一点边际问题
                 terminate_cnt += 1
-
+                early_terminate_arr.append(terminate_arr[i])
             if this_env_is_mw_series:
                 package_x.append(
                     logger.test_data["package_x"][i]
@@ -327,8 +328,8 @@ def eval(
                 "variant": scenario_name,
                 "scenario": config.eval_scenario.name,
                 "terminate_cnt": terminate_cnt,
+                "avg_terminate_at": sum(early_terminate_arr) / len(early_terminate_arr),
                 "total_episodes": len(terminate_arr),
-                "avg_terminate_at": sum(terminate_arr) / len(terminate_arr),
                 "angle_data_avg": sum(angle_flatten) / len(angle_flatten),
                 "angle_data_std": np.std(angle_flatten),
                 "angle_larger_than_5": sum([1 for angle in angle_flatten if angle > 5])
@@ -359,8 +360,8 @@ def eval(
                 "variant": scenario_name,
                 "scenario": config.eval_scenario.name,
                 "terminate_cnt": terminate_cnt,
+                "avg_terminate_at": sum(early_terminate_arr) / len(early_terminate_arr),
                 "total_episodes": len(terminate_arr),
-                "avg_terminate_at": sum(terminate_arr) / len(terminate_arr),
                 "percentage_of_v_out_of_control": sum(
                     logger.test_data["percentage_of_v_out_of_control"]
                 )
