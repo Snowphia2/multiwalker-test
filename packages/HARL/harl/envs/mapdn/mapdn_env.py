@@ -287,11 +287,9 @@ class MapdnHARLEnv(
         """
         self.cur_step += 1
         acts = actions.flatten().tolist()
-        # if self.cur_step >= 101:
-        #     acts = [1] * self.n_agents
-        # print("actions", acts)
+        if self.cur_step >= 101 and self.cur_step <= 200:
+            acts = [1] * self.n_agents
         obs, rew, term, trunc, info = self.env.step(acts)  # type: ignore
-        # print("info", info)
         # 这里的析构是aec_to_parallel_wrapper负责的
         if self.cur_step == self.max_cycles:
             trunc = {agent: True for agent in self.agents}

@@ -327,7 +327,8 @@ def eval(
                 "variant": scenario_name,
                 "scenario": config.eval_scenario.name,
                 "terminate_cnt": terminate_cnt,
-                "total_episodes": config.eval_settings.general.eval_episodes,
+                "total_episodes": len(terminate_arr),
+                "avg_terminate_at": sum(terminate_arr) / len(terminate_arr),
                 "angle_data_avg": sum(angle_flatten) / len(angle_flatten),
                 "angle_data_std": np.std(angle_flatten),
                 "angle_larger_than_5": sum([1 for angle in angle_flatten if angle > 5])
@@ -348,7 +349,6 @@ def eval(
                 "total_timesteps1": sum(terminate_arr)
                 + (config.eval_settings.general.eval_episodes - len(terminate_arr))
                 * config.environment.env_tweak.max_cycles,
-                "avg_terminate_at": sum(terminate_arr) / len(terminate_arr),
                 "angle_data": angle_flatten,
                 "angle_data_grouped": angle_arr,
             }
@@ -359,7 +359,7 @@ def eval(
                 "variant": scenario_name,
                 "scenario": config.eval_scenario.name,
                 "terminate_cnt": terminate_cnt,
-                "total_episodes": config.eval_settings.general.eval_episodes,
+                "total_episodes": len(terminate_arr),
                 "avg_terminate_at": sum(terminate_arr) / len(terminate_arr),
                 "percentage_of_v_out_of_control": sum(
                     logger.test_data["percentage_of_v_out_of_control"]
