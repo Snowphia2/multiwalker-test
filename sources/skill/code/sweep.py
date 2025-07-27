@@ -26,12 +26,12 @@ def main():
     parser.add_argument(
         "--agent_id",
         type=str,
-        default="yuzh2001-iscas/harl_mapdn_ppo_sweep/5gyktw46",
+        default="yuzh2001-iscas/mw_harl_exp_reward_new/a2pu5zb4",
         help="wandb agent ID",
     )
 
     args = parser.parse_args()
-    n_jobs = 24
+    n_jobs = 12
 
     print(f"启动 {n_jobs} 个并发agent执行: {args.agent_id}")
 

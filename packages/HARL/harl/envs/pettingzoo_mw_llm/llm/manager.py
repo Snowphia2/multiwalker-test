@@ -14,6 +14,8 @@ from harl.envs.pettingzoo_mw.walker.multiwalker.mw_move import (
 from prompt_template import PromptTemplate
 from .agent import generate_prompt
 
+import rich
+
 
 @final
 class PettingZooMWLLMManager(LLMManager[TEnv, TEnvRaw, ObsType, StateType]):
@@ -44,6 +46,7 @@ class PettingZooMWLLMManager(LLMManager[TEnv, TEnvRaw, ObsType, StateType]):
     def _llm_decision_in_env(self, decisions: dict[str, Any]) -> None:
         target_vs = decisions["target_vs"]
         assert isinstance(self.real_env, _env_move)
-        # print("target_vs: ", target_vs)
+        print("[decisions:] ")
+        rich.print(decisions)
         for agent_id in range(self.env.num_agents):
             self.real_env.set_t_v_agent(agent_id, target_vs[agent_id])

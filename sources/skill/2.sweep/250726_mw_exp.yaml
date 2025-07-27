@@ -1,6 +1,6 @@
 program: sources.skill.code.train
 method: bayes
-project: mw_harl_exp_reward
+project: mw_harl_exp_reward_new
 metric:
   goal: maximize
   name: eval_average_episode_rewards.max
