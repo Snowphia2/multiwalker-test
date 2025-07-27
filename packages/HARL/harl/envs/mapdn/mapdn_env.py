@@ -79,6 +79,10 @@ class MapdnEnvConfig:
         "case322_3min_final",
     ] = "case33_3min_final"
 
+    test_day: int = 180
+    test_hour: int = 23
+    test_quarter: int = 2
+
     def __post_init__(self):
         if self.data_path[-1] != "/":
             self.data_path += "/"
@@ -224,7 +228,7 @@ class MapdnHARLEnv(
     agents: list[TAgentId]
     _seed: int
 
-    def __init__(self, args: MapdnEnvConfig):
+    def __init__(self, args: MapdnEnvConfig, is_eval: bool = False):
         self.args: MapdnEnvConfig = copy.deepcopy(args)
 
         self.discrete: bool = False
@@ -251,8 +255,18 @@ class MapdnHARLEnv(
 
         super().__init__(args)
 
+        # if is_eval:
+        #     self.env.real_env.manual_reset(
+        #         args.test_day, args.test_hour, args.test_quarter
+        #     )
+        #     print("if this got printed, then the manual_reset is called")
+
     def _init_event_mapping(self) -> None:
-        pass
+        from .events.load_change import LoadChangeEventManager
+
+        self.event_mapping = {
+            "load_change": LoadChangeEventManager,
+        }
 
     @property
     def global_state(self) -> StateType:
@@ -271,19 +285,24 @@ class MapdnHARLEnv(
         """
         return local_obs, global_state, rewards, dones, infos, available_actions
         """
-        obs, rew, term, trunc, info = self.env.step(actions.flatten().tolist())  # type: ignore
-        # 这里的析构是aec_to_parallel_wrapper负责的
-
         self.cur_step += 1
+        acts = actions.flatten().tolist()
+        # if self.cur_step >= 101 and self.cur_step <= 200:
+        #     acts = [1] * self.n_agents
+        obs, rew, term, trunc, info = self.env.step(acts)  # type: ignore
+        # 这里的析构是aec_to_parallel_wrapper负责的
         if self.cur_step == self.max_cycles:
             trunc = {agent: True for agent in self.agents}
-            for agent in self.agents:
-                info[agent]["bad_transition"] = True
+            info["bad_transition"] = True
+
+        info["curr_step"] = self.cur_step
+
         dones = {agent: term[agent] or trunc[agent] for agent in self.agents}
         global_state = self.wrap(self.repeat(self.global_state))
         total_reward: float = sum([rew[agent] for agent in self.agents])
         rewards: list[list[float]] = [[total_reward]] * self.n_agents
-        # self.trigger_event()
+        self.trigger_event()
+
         return (
             self.unwrap(obs),
             self.unwrap(global_state),
@@ -297,6 +316,7 @@ class MapdnHARLEnv(
         """重置环境并返回初始观测和状态"""
         self._seed += 1
         self.cur_step = 0
+        self.seed(self._seed)
         obs, global_state = self.env.reset(seed=self._seed)  # type: ignore
         obs = self.unwrap(obs)
         s_obs = self.repeat(global_state)
@@ -310,3 +330,6 @@ class MapdnHARLEnv(
 
     def seed(self, seed: int) -> None:
         self._seed = seed
+        from harl.utils.envs_tools import set_seed
+
+        set_seed({"seed_specify": True, "seed": seed})

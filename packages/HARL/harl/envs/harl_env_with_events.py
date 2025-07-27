@@ -40,6 +40,7 @@ class Event:
     given_timestep_trigger_args: Union[GivenTimestepsTriggerArgs, None]
     should_trigger_by_random: bool
     random_trigger_args: Union[RandomTriggerArgs, None]
+    lasting: bool = False
 
     def __post_init__(self):
         if (
@@ -93,6 +94,7 @@ class EventManager(Generic[TEnv, TEnvRaw], ABC):
     original_backup: Any
     env: TEnv
     real_env: TEnvRaw
+    event_args: Any | None
 
     def _get_real_env(self) -> TEnvRaw:
         return self.real_env
@@ -110,7 +112,7 @@ class EventManager(Generic[TEnv, TEnvRaw], ABC):
         self.real_env = self._extract_real_env()
 
     @abstractmethod
-    def _event_random_value(self) -> Any:
+    def _event_random_value(self) -> dict[str, Any]:
         pass
 
     @abstractmethod
@@ -124,18 +126,24 @@ class EventManager(Generic[TEnv, TEnvRaw], ABC):
     def _event_stop(self) -> None:
         pass
 
-    def _get_event_args_value(self) -> Any:
+    def _prepare_env(self) -> None:
+        self.real_env = self._extract_real_env()
+        assert self.real_env is not None
+
+    def _get_event_args_value(self) -> Any | None:
         if self.event_status.args is None:
             raise ValueError("args must be provided to be triggered")
         if self.event_status.args.type == "given":
-            return self.event_status.args.given_value
+            self.event_args = self.event_status.args.given_value
+            return self.event_args
         elif self.event_status.args.type == "random":
-            return self._event_random_value()
+            self.event_args = self._event_random_value()
+            return self.event_args
 
     def start(self, cur_step: int) -> None:
         event_status = self.event_status
         event = self.event_config
-        if event_status.is_active:
+        if event_status.is_active and not event.lasting:
             print(f"Event {event.event_id} is already active")
             return
         event_status.is_active = True
@@ -297,7 +305,6 @@ class HarlEnvWithEvents(
             self.event_mapping[event.event_id](event_config=event, env=self.env)
             for event in self.events
         ]
-        print(self.event_managers)
 
     def get_events(self) -> list[Event]:
         return self.events
@@ -317,11 +324,20 @@ class HarlEnvWithEvents(
                 ), (
                     f"{event_idx} given_timestep_trigger_args must be provided to be triggered"
                 )
-                if (
-                    self.cur_step
-                    == event_manager.event_config.given_timestep_trigger_args.trigger_at_timestep
-                ):
-                    event_manager.start(self.cur_step)
+                if event_manager.event_config.lasting:
+                    if (
+                        self.cur_step
+                        >= event_manager.event_config.given_timestep_trigger_args.trigger_at_timestep
+                        and self.cur_step
+                        <= event_manager.event_config.given_timestep_trigger_args.stop_at_timestep
+                    ):
+                        event_manager.start(self.cur_step)
+                else:
+                    if (
+                        self.cur_step
+                        == event_manager.event_config.given_timestep_trigger_args.trigger_at_timestep
+                    ):
+                        event_manager.start(self.cur_step)
             elif event_manager.event_config.should_trigger_by_random:
                 import random
 

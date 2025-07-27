@@ -1,7 +1,7 @@
 defaults:
   - algorithm: mappo
-  - environment: pettingzoo_mw_llm
-  - scenario: move
+  - environment: mapdn
+  - scenario: raw
 
   - algorithm_parameters: ${algorithm}
   - environment_parameters: ${environment}
@@ -32,7 +32,7 @@ eval_settings:
 
     # 是否渲染
     render: False
-    render_episodes: 5
+    render_episodes: 1
 
     # 是否进行ablation
     ablation: False
