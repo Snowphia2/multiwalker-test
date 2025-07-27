@@ -76,7 +76,13 @@ ENV_DESC = """
 ### 速度参考值说明
 0.4是正常速度，0.7是加速，0.1是减速。
 
-请根据上述信息为三个机器人分配速度参考值，输出为：{"target_vs": [0.4, 0.4, 0.4]}，不输出任何其他文本，只输出上述选择；不使用markdown格式，使用双引号而非单引号。
+
+## 输出格式
+请根据上述信息为三个机器人分配速度参考值，
+输出为：{"target_vs": [0.4, 0.4, 0.4]}
+使用json格式，不输出任何其他文本，只输出上述内容；
+不使用markdown格式，使用双引号而非单引号。
+务必输出为能直接被json.loads解析的json字符串。
 
 
 ## 信息
@@ -403,7 +409,7 @@ def generate_prompt(
         prompt.append("当前输出说明：本帧为每30帧采样一次的观测结果。\n")
     if ref_v is not None:
         prompt.append(f"当前的目标速度：{json.dumps(ref_v)}")
-    print("prompt: ", "\n".join(prompt))
+    # print("prompt: ", "\n".join(prompt))
     prompt = [ENV_DESC, "\n".join(prompt)]
     return "\n".join(prompt)
 

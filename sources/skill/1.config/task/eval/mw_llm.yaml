@@ -32,7 +32,7 @@ eval_settings:
 
     # 是否渲染
     render: False
-    render_episodes: 2
+    render_episodes: 5
 
     # 是否进行ablation
     ablation: False

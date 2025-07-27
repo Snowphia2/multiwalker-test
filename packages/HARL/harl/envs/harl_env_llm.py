@@ -105,7 +105,7 @@ class LLMManager(ABC, Generic[TEnv, TEnvRaw, ObsType, StateType]):
             response = self.llm_client.chat.completions.create(
                 model=self.llm_config.model,
                 messages=[{"role": "user", "content": prompt}],
-                temperature=0.1,
+                temperature=0,
             )
             result = response.choices[0].message.content
             assert result is not None, "llm response is None"

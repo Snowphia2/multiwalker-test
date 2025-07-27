@@ -23,9 +23,9 @@ class PettingZooMWLLMEnv(PettingZooMWEnv, HarlEnvWithLLM):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.llm_manager = self._init_llm_manager()
-        self.llm_frequency = 100
+        self.llm_frequency = 50
         self.llm_manager._llm_decision_in_env(
-            {"explanation": "test", "target_vs": [0.4, 0.4, 0.4]}
+            {"explanation": "test", "target_vs": [0.8, 0.8, 0.8]}
         )
 
     def _init_llm_manager(self) -> PettingZooMWLLMManager:
