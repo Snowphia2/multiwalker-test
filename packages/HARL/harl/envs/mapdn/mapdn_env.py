@@ -286,19 +286,19 @@ class MapdnHARLEnv(
         return local_obs, global_state, rewards, dones, infos, available_actions
         """
         self.cur_step += 1
-        print("cur_step", self.cur_step)
         acts = actions.flatten().tolist()
-        if self.cur_step >= 101:
-            acts = [1] * self.n_agents
+        # if self.cur_step >= 101:
+        #     acts = [1] * self.n_agents
         # print("actions", acts)
         obs, rew, term, trunc, info = self.env.step(acts)  # type: ignore
         # print("info", info)
-        print("if this got printed, then the step is called and not error")
         # 这里的析构是aec_to_parallel_wrapper负责的
         if self.cur_step == self.max_cycles:
             trunc = {agent: True for agent in self.agents}
-            for agent in self.agents:
-                info[agent]["bad_transition"] = True
+            info["bad_transition"] = True
+
+        info["curr_step"] = self.cur_step
+
         dones = {agent: term[agent] or trunc[agent] for agent in self.agents}
         global_state = self.wrap(self.repeat(self.global_state))
         total_reward: float = sum([rew[agent] for agent in self.agents])
@@ -318,6 +318,7 @@ class MapdnHARLEnv(
         """重置环境并返回初始观测和状态"""
         self._seed += 1
         self.cur_step = 0
+        self.seed(self._seed)
         obs, global_state = self.env.reset(seed=self._seed)  # type: ignore
         obs = self.unwrap(obs)
         s_obs = self.repeat(global_state)
@@ -331,3 +332,6 @@ class MapdnHARLEnv(
 
     def seed(self, seed: int) -> None:
         self._seed = seed
+        from harl.utils.envs_tools import set_seed
+
+        set_seed({"seed_specify": True, "seed": seed})

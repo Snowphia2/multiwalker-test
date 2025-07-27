@@ -35,6 +35,8 @@ class SumoTweakConfig:
     additional_sumo_cmd: Optional[str] = None
     render_mode: Optional[str] = None
 
+    max_cycles: Optional[int] = None
+
 
 @dataclass
 class SumoEvalScenarioConfig:

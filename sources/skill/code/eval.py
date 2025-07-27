@@ -17,8 +17,16 @@ from harl.envs.pettingzoo_mw.pettingzoo_mw_logger import PettingZooMWLogger
 from moviepy.video.io.VideoFileClip import VideoFileClip
 import imageio
 from typing import cast
+from enum import Enum
 
 os.environ["SDL_VIDEODRIVER"] = "dummy"
+
+
+class Env(Enum):
+    MAPDN = "mapdn"
+    SUMO = "sumo"
+    PETTINGZOO_MW = "pettingzoo_mw"
+    PETTINGZOO_MW_LLM = "pettingzoo_mw_llm"
 
 
 def _to_harl_dict(
@@ -118,15 +126,20 @@ def eval(
         save_group,
     ) = _to_harl_dict(config)
 
+    this_env = Env(env_name)
+    this_env_is_mw_series = (
+        this_env == Env.PETTINGZOO_MW or this_env == Env.PETTINGZOO_MW_LLM
+    )
+
     # 1. 加载模型
     env_folder = ""
-    if env_name == "pettingzoo_mw":
+    if this_env == Env.PETTINGZOO_MW:
         env_folder = "multiwalker"
-    elif env_name == "pettingzoo_mw_llm":
+    elif this_env == Env.PETTINGZOO_MW_LLM:
         env_folder = "multiwalker"
-    elif env_name == "sumo":
+    elif this_env == Env.SUMO:
         env_folder = "sumo"
-    elif env_name == "mapdn":
+    elif this_env == Env.MAPDN:
         env_folder = "mapdn"
     model_path = f"./results/models/{save_group}/{env_name}/{env_folder}/{algorithm_name}/[{algorithm_name}]<{scenario_name}>"
     rich.print(f"Loading model from {model_path}")
@@ -135,7 +148,7 @@ def eval(
     name_suffix = ""
     rich.print(config.environment.env_tweak.tweak_types)
     tweak_types = config.environment.env_tweak.tweak_types
-    if env_name == "pettingzoo_mw" or env_name == "pettingzoo_mw_llm":
+    if this_env_is_mw_series:
         tweak_types = ["n_walkers", *sorted(config.environment.env_tweak.tweak_types)]
     env_tweaks = _to_dict(config.environment.env_tweak)
     for key in tweak_types:
@@ -170,13 +183,13 @@ def eval(
         algo_dict["logger"]["log_dir"] = f"./results/logs/{save_group}"
 
         # FIXME: 为什么需要这个？
-        if (
-            env_name == "pettingzoo_mw" or env_name == "pettingzoo_mw_llm"
-        ) and algo_dict["train"].get("num_env_steps") is not None:
+        if (this_env_is_mw_series) and algo_dict["train"].get(
+            "num_env_steps"
+        ) is not None:
             algo_dict["train"]["num_env_steps"] = 1  # FIXME: ???
 
         # disturbances的引入
-        if env_name == "pettingzoo_mw" or env_name == "pettingzoo_mw_llm":
+        if this_env_is_mw_series:
             env_dict["custom"]["is_eval"] = True
             env_dict["custom"]["eval_disturb"] = _to_dict(config.eval_scenario).get(
                 "disturbances", []
@@ -256,6 +269,7 @@ def eval(
     else:
         # 根据是否是off-policy，选择不同的eval方式
         has_logger = hasattr(runner, "logger")
+        angle_arr = []
         if has_logger:
             runner = cast(OnPolicyMARunner, runner)
             logger: PettingZooMWLogger = runner.logger
@@ -266,7 +280,8 @@ def eval(
             assert runner.eval_envs is not None
             runner.eval_envs.reset()
             terminate_arr = logger.test_data["terminate_at"]
-            angle_arr = logger.test_data["angle_data"]
+            if this_env_is_mw_series:
+                angle_arr = logger.test_data["angle_data"]
         else:
             runner = cast(OffPolicyBaseRunner, runner)
             logger = None
@@ -283,52 +298,118 @@ def eval(
                 terminate_arr[i] + 2 < config.environment.env_tweak.max_cycles
             ):  # +2 去除一点边际问题
                 terminate_cnt += 1
-            package_x.append(
-                logger.test_data["package_x"][i] if has_logger else runner.episode_xs[i]
-            )
+
+            if this_env_is_mw_series:
+                package_x.append(
+                    logger.test_data["package_x"][i]
+                    if has_logger
+                    else runner.episode_xs[i]  # type: ignore
+                )
         # 关闭eval_envs和runner
         if hasattr(runner, "eval_envs") and runner.eval_envs is not None:
             runner.eval_envs.close()
         runner.close()
 
-        angle_flatten = [
-            angle for episode_angles in angle_arr for angle in episode_angles
-        ]
         import numpy as np
 
         end_time = time.time()
 
         assert config.environment.env_tweak.max_cycles is not None
 
-        return_result = {
-            "desc": f"[{algorithm_name}]<{scenario_name}>_{config.eval_scenario.name}_{_to_dict(config.eval_scenario).get('desc', 'original')}",
-            "algo": algorithm_name,
-            "variant": scenario_name,
-            "scenario": config.eval_scenario.name,
-            "terminate_cnt": terminate_cnt,
-            "terminate_cnt1": len(terminate_arr),
-            "total_episodes": config.eval_settings.general.eval_episodes,
-            "angle_data": angle_flatten,
-            "angle_data_grouped": angle_arr,
-            "angle_data_avg": sum(angle_flatten) / len(angle_flatten),
-            "angle_data_std": np.std(angle_flatten),
-            "angle_larger_than_5": sum([1 for angle in angle_flatten if angle > 5])
-            / len(angle_flatten),
-            "angle_larger_than_10": sum([1 for angle in angle_flatten if angle > 10])
-            / len(angle_flatten),
-            "angle_larger_than_15": sum([1 for angle in angle_flatten if angle > 15])
-            / len(angle_flatten),
-            "package_x": sum(package_x) / len(package_x),
-            "total_time": end_time - start_time,
-            "total_timesteps": sum(terminate_arr)
-            + (config.eval_settings.general.eval_episodes - terminate_cnt)
-            * config.environment.env_tweak.max_cycles,
-            "total_timesteps1": sum(terminate_arr)
-            + (config.eval_settings.general.eval_episodes - len(terminate_arr))
-            * config.environment.env_tweak.max_cycles,
-            "avg_terminate_at": sum(terminate_arr) / len(terminate_arr),
-        }
+        if this_env_is_mw_series:
+            angle_flatten = [
+                angle for episode_angles in angle_arr for angle in episode_angles
+            ]
+
+            return_result = {
+                "desc": f"[{algorithm_name}]<{scenario_name}>_{config.eval_scenario.name}_{_to_dict(config.eval_scenario).get('desc', 'original')}",
+                "algo": algorithm_name,
+                "variant": scenario_name,
+                "scenario": config.eval_scenario.name,
+                "terminate_cnt": terminate_cnt,
+                "total_episodes": config.eval_settings.general.eval_episodes,
+                "angle_data_avg": sum(angle_flatten) / len(angle_flatten),
+                "angle_data_std": np.std(angle_flatten),
+                "angle_larger_than_5": sum([1 for angle in angle_flatten if angle > 5])
+                / len(angle_flatten),
+                "angle_larger_than_10": sum(
+                    [1 for angle in angle_flatten if angle > 10]
+                )
+                / len(angle_flatten),
+                "angle_larger_than_15": sum(
+                    [1 for angle in angle_flatten if angle > 15]
+                )
+                / len(angle_flatten),
+                "package_x": sum(package_x) / len(package_x),
+                "total_time": end_time - start_time,
+                "total_timesteps": sum(terminate_arr)
+                + (config.eval_settings.general.eval_episodes - terminate_cnt)
+                * config.environment.env_tweak.max_cycles,
+                "total_timesteps1": sum(terminate_arr)
+                + (config.eval_settings.general.eval_episodes - len(terminate_arr))
+                * config.environment.env_tweak.max_cycles,
+                "avg_terminate_at": sum(terminate_arr) / len(terminate_arr),
+                "angle_data": angle_flatten,
+                "angle_data_grouped": angle_arr,
+            }
+        elif this_env == Env.MAPDN:
+            return_result = {
+                "desc": f"[{algorithm_name}]<{scenario_name}>_{config.eval_scenario.name}_{_to_dict(config.eval_scenario).get('desc', 'original')}",
+                "algo": algorithm_name,
+                "variant": scenario_name,
+                "scenario": config.eval_scenario.name,
+                "terminate_cnt": terminate_cnt,
+                "total_episodes": config.eval_settings.general.eval_episodes,
+                "avg_terminate_at": sum(terminate_arr) / len(terminate_arr),
+                "percentage_of_v_out_of_control": sum(
+                    logger.test_data["percentage_of_v_out_of_control"]
+                )
+                / len(logger.test_data["percentage_of_v_out_of_control"]),
+                "percentage_of_lower_than_lower_v": sum(
+                    logger.test_data["percentage_of_lower_than_lower_v"]
+                )
+                / len(logger.test_data["percentage_of_lower_than_lower_v"]),
+                "percentage_of_higher_than_upper_v": sum(
+                    logger.test_data["percentage_of_higher_than_upper_v"]
+                )
+                / len(logger.test_data["percentage_of_higher_than_upper_v"]),
+                "totally_controllable_ratio": sum(
+                    logger.test_data["totally_controllable_ratio"]
+                )
+                / len(logger.test_data["totally_controllable_ratio"]),
+                "average_voltage_deviation": sum(
+                    logger.test_data["average_voltage_deviation"]
+                )
+                / len(logger.test_data["average_voltage_deviation"]),
+                "average_voltage": sum(logger.test_data["average_voltage"])
+                / len(logger.test_data["average_voltage"]),
+                "max_voltage_drop_deviation": sum(
+                    logger.test_data["max_voltage_drop_deviation"]
+                )
+                / len(logger.test_data["max_voltage_drop_deviation"]),
+                "max_voltage_rise_deviation": sum(
+                    logger.test_data["max_voltage_rise_deviation"]
+                )
+                / len(logger.test_data["max_voltage_rise_deviation"]),
+                "total_line_loss": sum(logger.test_data["total_line_loss"])
+                / len(logger.test_data["total_line_loss"]),
+                "q_loss": sum(logger.test_data["q_loss"])
+                / len(logger.test_data["q_loss"]),
+                "destroy": sum(logger.test_data["destroy"])
+                / len(logger.test_data["destroy"]),
+                "sum_rewards": sum(logger.test_data["sum_rewards"])
+                / len(logger.test_data["sum_rewards"]),
+            }
+        else:
+            return_result = {
+                "desc": f"[{algorithm_name}]<{scenario_name}>_{config.eval_scenario.name}_{_to_dict(config.eval_scenario).get('desc', 'original')}",
+                "algo": algorithm_name,
+                "variant": scenario_name,
+                "scenario": config.eval_scenario.name,
+            }
         print(f"Evaluation time: {end_time - start_time} seconds")
+
+        return_result["full_configs"] = _to_dict(config)
         return return_result
 
     end_time = time.time()
