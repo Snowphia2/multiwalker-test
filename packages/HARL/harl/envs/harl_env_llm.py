@@ -70,9 +70,13 @@ class LLMManager(ABC, Generic[TEnv, TEnvRaw, ObsType, StateType]):
         import json
 
         result = self.get_llm_result(obses, global_state)
-        json_loaded = json.loads(result)
-        assert isinstance(json_loaded, dict)
-        return json_loaded
+        try:
+            json_loaded = json.loads(result)
+            assert isinstance(json_loaded, dict)
+            return json_loaded
+        except Exception:
+            print(f"Error: {result}")
+            return {"target_vs": [0.4, 0.4, 0.4]}
 
     def translate_obses(
         self, obses: list[ObsType], global_state: StateType

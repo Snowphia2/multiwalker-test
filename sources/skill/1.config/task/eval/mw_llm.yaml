@@ -22,7 +22,7 @@ model:
 eval_settings:
   general:
     seed: 42
-    eval_episodes: 50
+    eval_episodes: 100
     eval_threads: 50
 
   functions:
