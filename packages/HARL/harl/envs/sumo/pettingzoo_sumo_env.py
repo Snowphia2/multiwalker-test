@@ -184,6 +184,44 @@ class PettingZooSumoEnv(
         return local_obs, global_state, rewards, dones, infos, available_actions
         """
         actions_wrapped = self.wrap(actions.flatten().tolist())
+
+        _override_signal = {
+            # "A2": [-1, -1, 25, 15],
+            "B2": [-1, -1, 45, 15],
+        }
+
+        if self.cur_step == 20:
+            self.traffic_info = {
+                "A2": [0, 0, 0, 0],
+                "B2": [0, 0, 0, 0],
+                "now_A2": 0,
+                "now_B2": 0,
+            }
+        if self.cur_step > 20 and self.cur_step < 5000:
+            for agent in self.agents:
+                if agent != "B2":
+                    continue
+                now_green_phase = self.traffic_info[f"now_{agent}"]
+                proposed_next_action = actions_wrapped[agent]
+                self.traffic_info[agent][now_green_phase] += self.args.delta_time
+                if (
+                    self.traffic_info[agent][now_green_phase]
+                    <= _override_signal[agent][now_green_phase]
+                ):
+                    # 如果还没达到最低要求，就不许换action
+                    actions_wrapped[agent] = now_green_phase
+                    print(
+                        f"ts={self.cur_step}, agent={agent}, current_green_phase={now_green_phase}, policy wants {proposed_next_action}, this_has_been: {self.traffic_info[agent][now_green_phase]}, [not allowed] to change since min is {_override_signal[agent][now_green_phase]}"
+                    )
+                else:
+                    # actions_wrapped[agent] = current_green_phase + 1
+                    print(
+                        f"ts={self.cur_step}, agent={agent}, current_green_phase={now_green_phase}, policy wants {proposed_next_action}, this_has_been: {self.traffic_info[agent][now_green_phase]}, [allowed] to change! change to {proposed_next_action}"
+                    )
+                    self.traffic_info[agent][now_green_phase] = 0
+                    self.traffic_info[f"now_{agent}"] = proposed_next_action
+
+        # 可以在这里延长绿灯时间；设个参数，atleast>33s; 小于33的时候不许关绿色信号。
         obs, rew, term, trunc, info = self.env.step(actions_wrapped)  # type: ignore
         # 这里的析构是aec_to_parallel_wrapper负责的
 
@@ -196,7 +234,7 @@ class PettingZooSumoEnv(
         global_state = self.repeat(self.global_state)
         total_reward: float = sum([rew[agent] for agent in self.agents])
         rewards: list[list[float]] = [[total_reward]] * self.n_agents
-        # self.trigger_event()
+        self.trigger_event()
         return (
             self.unwrap(obs),
             global_state,
