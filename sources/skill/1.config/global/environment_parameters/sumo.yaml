@@ -5,7 +5,8 @@ defaults:
 net_file: "packages/SUMO/sumo_rl/nets/RESCO/grid4x4/grid4x4.net.xml"
 route_file: "packages/SUMO/sumo_rl/nets/RESCO/grid4x4/grid4x4_1.rou.xml"
 out_csv_name: "results/sumo/4x4grid/mappo"
-num_seconds: 3600
-use_gui: False
+begin_time: 5000  # 仿真开始时间步（秒）
+num_seconds: 1000
+use_gui: True
 min_green: 8
 additional_sumo_cmd: "--scale 3.0"
