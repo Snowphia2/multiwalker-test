@@ -24,7 +24,7 @@ command:
   - "wandb.wandb_group=250721_sumo_harl"
   - "++wandb.wandb_project=sumo_harl"
   - "model.save_group=latest"
-  - "algorithm=mappo"
+  - "algorithm=happo"
   - "environment=sumo"
   - "scenario=raw"
   - "algorithm_parameters.train.num_env_steps=1000000"

@@ -3,15 +3,15 @@ defaults:
   - _self_
 
 run_group: 250722_llm_env
-save_group: mapdn/best # 0710/0322
+save_group: sumo/max_reward # 0710/0322
 steps:
   - type: eval
     multirun: False
-    config_name: mapdn
+    config_name: sumo
     args:
-      - algorithm=happo
+      - algorithm=mappo
       - ++environment.env_tweak.tweak_types=[]
-      - eval_scenario=mapdn/mapdn_load_change
+      - eval_scenario=sumo/lane_closed
 hydra:
   searchpath: 
     - file://sources/skill/0.run
