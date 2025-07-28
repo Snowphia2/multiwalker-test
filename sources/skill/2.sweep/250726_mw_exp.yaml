@@ -6,17 +6,17 @@ metric:
   name: eval_average_episode_rewards.max
 parameters:
   algorithm_parameters.model.lr:
-    values: [0.001, 0.0001]
+    values: [0.0001]
   algorithm_parameters.algo.ppo_epoch:
-    values: [5, 10, 15]
-  algorithm_parameters.algo.actor_num_mini_batch:
-    values: [1, 2, 4]
+    values: [10]
+  algorithm_parameters.algo.actor_num_mini_batch: 
+    values: [1, 4]
   algorithm_parameters.train.n_rollout_threads:
-    values: [20]
+    values: [30]
   environment.env_tweak.reward_factor:
-    values: [0.5, 1.0]
+    values: [0.5, 1.0, 2.0]
   environment.env_tweak.terminate_reward:
-    values: [-100.0, -10.0, -500.0]
+    values: [ -10.0, -100.0, -500.0]
 command:
   - ${env}
   - uv
