@@ -3,7 +3,7 @@ desc: 变速场景
 
 env_tweak:
   # terrain_config: [{'type': 'flat', 'length': 35}, {'type': 'up', 'length': 6, 'angle': 13}, {'type': 'flat', 'length': 200}]
-  terrain_config: [{'type': 'flat', 'length': 20}, {'type': 'up', 'length': 6, 'angle': 13}, {'type': 'terrain', 'length': 600}]
+  terrain_config: [{'type': 'flat', 'length': 20}, {'type': 'up', 'length': 6, 'angle': 13}, {'type': 'flat', 'length': 600}]
 
 
 disturbances:

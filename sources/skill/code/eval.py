@@ -350,8 +350,10 @@ def eval(
                 "total_timesteps1": sum(terminate_arr)
                 + (config.eval_settings.general.eval_episodes - len(terminate_arr))
                 * config.environment.env_tweak.max_cycles,
-                "angle_data": angle_flatten,
-                "angle_data_grouped": angle_arr,
+                "terminate_arr": terminate_arr,
+                "total_timesteps1": sum(terminate_arr),
+                # "angle_data": angle_flatten,
+                # "angle_data_grouped": angle_arr,
             }
         elif this_env == Env.MAPDN:
             return_result = {

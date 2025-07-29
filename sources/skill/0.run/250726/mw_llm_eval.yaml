@@ -5,7 +5,7 @@ defaults:
 run_group: 250722_llm_env
 
 
-save_group: llm/1659
+save_group: follower
 steps:
   - type: eval
     multirun: False
