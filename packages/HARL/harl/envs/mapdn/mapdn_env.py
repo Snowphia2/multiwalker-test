@@ -170,7 +170,7 @@ class MapdnWrapperEnv(EnvProtocol):
             self.wrap(self.repeat(reward)),
             self.wrap(self.repeat(terminated)),
             self.wrap(self.repeat(terminated)),
-            info,
+            self.wrap(self.repeat(info)),
         )
 
     def reset(self, seed: Union[int, None] = None):
@@ -287,29 +287,29 @@ class MapdnHARLEnv(
         """
         self.cur_step += 1
         acts = actions.flatten().tolist()
-        if self.cur_step >= 101 and self.cur_step <= 200:
-            acts = [1] * self.n_agents
+        # if self.cur_step >= 101 and self.cur_step <= 200:
+        #     acts = [1] * self.n_agents
         obs, rew, term, trunc, info = self.env.step(acts)  # type: ignore
         # 这里的析构是aec_to_parallel_wrapper负责的
-        if self.cur_step == self.max_cycles:
-            trunc = {agent: True for agent in self.agents}
-            info["bad_transition"] = True
 
         for agent in self.agents:
             info[agent]["curr_step"] = self.cur_step
+            if self.cur_step == self.max_cycles:
+                trunc = {agent: True for agent in self.agents}
+                info[agent]["bad_transition"] = True
 
         dones = {agent: term[agent] or trunc[agent] for agent in self.agents}
         global_state = self.wrap(self.repeat(self.global_state))
         total_reward: float = sum([rew[agent] for agent in self.agents])
         rewards: list[list[float]] = [[total_reward]] * self.n_agents
-        self.trigger_event()
+        # self.trigger_event()
 
         return (
             self.unwrap(obs),
             self.unwrap(global_state),
             rewards,
             self.unwrap(dones),
-            self.repeat(info),
+            self.unwrap(info),
             self.get_avail_actions(),
         )
 
