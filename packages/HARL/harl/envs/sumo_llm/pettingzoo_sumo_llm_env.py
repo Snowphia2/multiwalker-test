@@ -59,6 +59,15 @@ class PettingZooSumoLLMEnv(PettingZooSumoEnv, HarlEnvWithLLM):
             end_time = time.time()
             print(f"llm time: {end_time - start_time}")
 
+        import random
+
+        random_initiated = random.random() < 0.5
+
+        if random_initiated:
+            self.should_use_predefined_signal_phases = True
+        else:
+            self.should_use_predefined_signal_phases = False
+
         if not self.should_use_predefined_signal_phases:
             self.traffic_info = {
                 "A2": [0, 0, 0, 0],
@@ -89,7 +98,6 @@ class PettingZooSumoLLMEnv(PettingZooSumoEnv, HarlEnvWithLLM):
                     )
                     self.traffic_info[agent][now_green_phase] = 0
                     self.traffic_info[f"now_{agent}"] = proposed_next_action
-
         import numpy as np
 
         obs, state, reward, terminated, info, available_actions = super().step(
