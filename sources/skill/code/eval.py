@@ -414,11 +414,11 @@ def eval(
                 "scenario": config.eval_scenario.name,
                 "tw_bigger_than_1000": len(logger.test_data["tw_bigger_than_1000"]),
                 "tw_bigger_than_1000_avg": sum(logger.test_data["tw_bigger_than_1000"])
-                / len(logger.test_data["tw_bigger_than_1000"]),
+                / (len(logger.test_data["tw_bigger_than_1000"]) + 1),
                 "system_total_waiting_time": sum(
                     logger.test_data["system_total_waiting_time"]
                 )
-                / len(logger.test_data["system_total_waiting_time"]),
+                / (len(logger.test_data["system_total_waiting_time"]) + 1),
                 "tw_bigger_than_1000_max": max(
                     logger.test_data["system_total_waiting_time"]
                 ),

@@ -8,15 +8,35 @@ class LaneCloseEventManager(SumoEventManager):
         print("[LaneCloseEventManager] starting!!!")
         self.real_env = self._extract_real_env()
         assert self.sumo_env is not None
-        self.sumo_env.lane.setDisallowed("A2B2_1", ["passenger"])
+        lane_id = "A2B2_1"
+        self.sumo_env.lane.setDisallowed(lane_id, ["all"])
 
-        pass
+        vehicle_ids = self.sumo_env.vehicle.getIDList()  # 获取所有车辆ID
+        for vehId in vehicle_ids:
+            route = self.sumo_env.vehicle.getRoute(
+                vehId
+            )  # 获取车辆当前路线（edge列表）
+            if "A2B2" in route:
+                waiting_time = self.sumo_env.vehicle.getWaitingTime(
+                    vehId
+                )  # 删除车辆，也可以做其他操作
+
+                if waiting_time > 100:
+                    print(
+                        f"Removed vehicle {vehId} because route contains edge {lane_id}"
+                    )
+                    self.sumo_env.vehicle.remove(vehId)
+                else:
+                    self.sumo_env.vehicle.rerouteEffort(vehId)
 
     def _event_stop(self) -> None:
         self.real_env = self._extract_real_env()
         assert self.sumo_env is not None
         self.sumo_env.lane.setDisallowed("A2B2_1", [])
-        pass
+
+        vehicle_ids = self.sumo_env.vehicle.getIDList()  # 获取所有车辆ID
+        for vehId in vehicle_ids:
+            self.sumo_env.vehicle.rerouteEffort(vehId)
 
     def _event_random_value(self) -> Any:
         pass
