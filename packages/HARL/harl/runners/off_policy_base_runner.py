@@ -691,6 +691,7 @@ class OffPolicyBaseRunner:
         """Render the model"""
         print("start rendering")
         render_rgb_array = []
+        reward_arr = []
         if self.manual_expand_dims:
             # this env needs manual expansion of the num_of_parallel_envs dimension
             for _ in range(self.algo_args["render"]["render_episodes"]):
@@ -725,6 +726,7 @@ class OffPolicyBaseRunner:
                         time.sleep(0.1)
                     if eval_dones[0]:
                         print(f"total reward of this episode: {rewards}")
+                        reward_arr.append(rewards)
                         break
                 render_rgb_array.append(episode_rgb_array)
         else:
@@ -766,7 +768,7 @@ class OffPolicyBaseRunner:
             else:
                 self.envs.save_replay()
         if render_mode == "rgb_array":
-            return render_rgb_array
+            return render_rgb_array, reward_arr
         else:
             return None
 
