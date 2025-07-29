@@ -573,10 +573,10 @@ class OffPolicyBaseRunner:
             ) = self.eval_envs.step(eval_actions)
             for eval_i in range(self.algo_args["eval"]["n_eval_rollout_threads"]):
                 one_episode_rewards[eval_i].append(eval_rewards[eval_i])
-                if cur_step <= eval_infos[eval_i][0]["curr_step"] + 1:
-                    episode_angles[eval_i].append(
-                        eval_infos[eval_i][0]["package_angle"]
-                    )
+                # if cur_step <= eval_infos[eval_i][0]["curr_step"] + 1:
+                #     episode_angles[eval_i].append(
+                #         eval_infos[eval_i][0]["package_angle"]
+                #     )
             one_episode_len += 1
 
             eval_dones_env = np.all(eval_dones, axis=1)
@@ -599,7 +599,7 @@ class OffPolicyBaseRunner:
                     )
                     one_episode_rewards[eval_i] = []
                     episode_lens.append(one_episode_len[eval_i].copy())
-                    episode_xs.append(eval_infos[eval_i][0]["package_x"])
+                    # episode_xs.append(eval_infos[eval_i][0]["package_x"])
                     one_episode_len[eval_i] = 0
 
             if eval_episode >= self.algo_args["eval"]["eval_episodes"]:
