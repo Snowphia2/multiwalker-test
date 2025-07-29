@@ -295,7 +295,8 @@ class MapdnHARLEnv(
             trunc = {agent: True for agent in self.agents}
             info["bad_transition"] = True
 
-        info["curr_step"] = self.cur_step
+        for agent in self.agents:
+            info[agent]["curr_step"] = self.cur_step
 
         dones = {agent: term[agent] or trunc[agent] for agent in self.agents}
         global_state = self.wrap(self.repeat(self.global_state))
