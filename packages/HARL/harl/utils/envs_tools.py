@@ -190,6 +190,13 @@ def make_eval_env(env_name, seed, n_threads, env_args):
                 from harl.envs.sumo.pettingzoo_sumo_env import SumoEnvConfig
 
                 env_args1 = from_dict(SumoEnvConfig, env_args)
+                import random
+
+                random.seed(seed + rank)
+                begin_time = random.randint(0, 12000)
+                # begin_time = 1700
+                # print(f"rank: {rank}, begin_time: {begin_time}")
+                env_args1.begin_time = begin_time
 
                 env = PettingZooSumoEnv(env_args1)
             elif env_name == "mapdn":

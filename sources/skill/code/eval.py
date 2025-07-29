@@ -279,9 +279,9 @@ def eval(
             runner.eval()
             assert runner.eval_envs is not None
             runner.eval_envs.reset()
-            terminate_arr = logger.test_data["terminate_at"]
+            terminate_arr = logger.test_data.get("terminate_at", [])
             if this_env_is_mw_series:
-                angle_arr = logger.test_data["angle_data"]
+                angle_arr = logger.test_data.get("angle_data", [])
         else:
             runner = cast(OffPolicyBaseRunner, runner)
             logger = None
@@ -400,6 +400,23 @@ def eval(
                 / len(logger.test_data["destroy"]),
                 "sum_rewards": sum(logger.test_data["sum_rewards"])
                 / len(logger.test_data["sum_rewards"]),
+            }
+        elif this_env == Env.SUMO:
+            return_result = {
+                "desc": f"[{algorithm_name}]<{scenario_name}>_{config.eval_scenario.name}_{_to_dict(config.eval_scenario).get('desc', 'original')}",
+                "algo": algorithm_name,
+                "variant": scenario_name,
+                "scenario": config.eval_scenario.name,
+                "tw_bigger_than_1000": len(logger.test_data["tw_bigger_than_1000"]),
+                "tw_bigger_than_1000_avg": sum(logger.test_data["tw_bigger_than_1000"])
+                / len(logger.test_data["tw_bigger_than_1000"]),
+                "system_total_waiting_time": sum(
+                    logger.test_data["system_total_waiting_time"]
+                )
+                / len(logger.test_data["system_total_waiting_time"]),
+                "tw_bigger_than_1000_max": max(
+                    logger.test_data["system_total_waiting_time"]
+                ),
             }
         else:
             return_result = {

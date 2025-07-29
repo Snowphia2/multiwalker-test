@@ -2,6 +2,13 @@ from harl.common.base_logger import BaseLogger
 import numpy as np
 
 
+def get_default_test_data():
+    return {
+        "system_total_waiting_time": [],
+        "tw_bigger_than_1000": [],
+    }
+
+
 class PettingZooSumoLogger(BaseLogger):
     def __init__(self, args, algo_args, env_args, num_agents, writter, run_dir):
         super(PettingZooSumoLogger, self).__init__(
@@ -9,25 +16,19 @@ class PettingZooSumoLogger(BaseLogger):
         )
         self.episode = 1
         self.is_testing = False
-        self.test_data = {
-            "system_total_waiting_time": [],
-        }
+        self.test_data = get_default_test_data()
 
     def init(self, episodes):
         """Initialize the logger."""
         super().init(episodes)
-        self.test_data = {
-            "system_total_waiting_time": [],
-        }
+        self.test_data = get_default_test_data()
 
     def get_task_name(self):
         return "sumo"
 
     def eval_init(self):
         super().eval_init()
-        self.test_data = {
-            "system_total_waiting_time": [],
-        }
+        self.test_data = get_default_test_data()
 
     def eval_per_step(self, eval_data):
         """Log evaluation information per step."""
@@ -43,6 +44,10 @@ class PettingZooSumoLogger(BaseLogger):
         for i in range(len(eval_infos)):
             if eval_dones[i][0]:
                 self.test_data["system_total_waiting_time"].append(
+                    eval_infos[i][0]["system_total_waiting_time"]
+                )
+            if eval_infos[i][0]["system_total_waiting_time"] > 3000:
+                self.test_data["tw_bigger_than_1000"].append(
                     eval_infos[i][0]["system_total_waiting_time"]
                 )
 
