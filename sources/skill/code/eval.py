@@ -27,6 +27,7 @@ class Env(Enum):
     SUMO = "sumo"
     PETTINGZOO_MW = "pettingzoo_mw"
     PETTINGZOO_MW_LLM = "pettingzoo_mw_llm"
+    SUMO_LLM = "sumo_llm"
 
 
 def _to_harl_dict(
@@ -138,6 +139,8 @@ def eval(
     elif this_env == Env.PETTINGZOO_MW_LLM:
         env_folder = "multiwalker"
     elif this_env == Env.SUMO:
+        env_folder = "sumo"
+    elif this_env == Env.SUMO_LLM:
         env_folder = "sumo"
     elif this_env == Env.MAPDN:
         env_folder = "mapdn"
@@ -403,7 +406,7 @@ def eval(
                 "sum_rewards": sum(logger.test_data["sum_rewards"])
                 / len(logger.test_data["sum_rewards"]),
             }
-        elif this_env == Env.SUMO:
+        elif this_env == Env.SUMO or this_env == Env.SUMO_LLM:
             return_result = {
                 "desc": f"[{algorithm_name}]<{scenario_name}>_{config.eval_scenario.name}_{_to_dict(config.eval_scenario).get('desc', 'original')}",
                 "algo": algorithm_name,
@@ -420,6 +423,9 @@ def eval(
                     logger.test_data["system_total_waiting_time"]
                 ),
             }
+            # if this_env == Env.SUMO_LLM:
+            # return_result["llm_time"] = sum(logger.test_data["llm_time"])
+            # / len(logger.test_data["llm_time"])
         else:
             return_result = {
                 "desc": f"[{algorithm_name}]<{scenario_name}>_{config.eval_scenario.name}_{_to_dict(config.eval_scenario).get('desc', 'original')}",

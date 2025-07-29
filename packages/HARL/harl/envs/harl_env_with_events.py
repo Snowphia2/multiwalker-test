@@ -313,9 +313,11 @@ class HarlEnvWithEvents(
         return self.event_managers
 
     def trigger_event(self) -> None:
-        assert self.events is not None, "events must be provided to be triggered"
+        if self.events is None:
+            print("[WARNING] events is None, no events to be triggered")
+            return
         assert self.event_mapping is not None, (
-            "event_mapping must be provided to be triggered"
+            "events provided, however event_mapping is not provided"
         )
         for event_idx, event_manager in enumerate(self.event_managers):
             if event_manager.event_config.should_trigger_by_given_timestep:
