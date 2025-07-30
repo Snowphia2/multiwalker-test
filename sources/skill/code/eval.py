@@ -211,19 +211,34 @@ def eval(
         runner.close()
         # wandb.finish()
 
+    is_online_policy = hasattr(runner, "logger")
     start_time = time.time()
     # 4. render？还是eval？
     if config.eval_settings.functions.render:
 
         def _render():
             render_mode = "rgb_array"
-            (
-                rgb_array,
-                rewards_arr,
-                episode_obses_arr,
-                lidar_obs_arr,
-            ) = runner.render(render_mode)
+            if is_online_policy:
+                (
+                    rgb_array,
+                    rewards_arr,
+                    episode_obses_arr,
+                    lidar_obs_arr,
+                ) = runner.render(render_mode)
+            else:
+                (
+                    rgb_array,
+                    rewards_arr,
+                ) = runner.render(render_mode)
             config_name = f"[{algorithm_name}]<{env_name}>_{scenario_name}{name_suffix}"
+            if rgb_array is not None:
+                export_gif(
+                    config_name=config_name,
+                    frames_arr=rgb_array,
+                    rewards_arr=rewards_arr,
+                )
+            if not is_online_policy:
+                return
             # 保存episode_obses_arr到JSON文件
             if (
                 episode_obses_arr is not None
@@ -256,12 +271,6 @@ def eval(
                     json.dump(lidar_obs_arr, f, ensure_ascii=False)
 
                 rich.print(f"Episode observations saved to: {json_path}")
-            if rgb_array is not None:
-                export_gif(
-                    config_name=config_name,
-                    frames_arr=rgb_array,
-                    rewards_arr=rewards_arr,
-                )
 
         _render()
         if hasattr(runner, "eval_envs") and runner.eval_envs is not None:
@@ -271,9 +280,8 @@ def eval(
         print(f"Render time: {end_time - start_time} seconds")
     else:
         # 根据是否是off-policy，选择不同的eval方式
-        has_logger = hasattr(runner, "logger")
         angle_arr = []
-        if has_logger:
+        if is_online_policy:
             runner = cast(OnPolicyMARunner, runner)
             logger: PettingZooMWLogger = runner.logger
             logger.is_testing = (
@@ -303,18 +311,16 @@ def eval(
             ):  # +2 去除一点边际问题
                 terminate_cnt += 1
                 early_terminate_arr.append(terminate_arr[i])
-            if this_env_is_mw_series:
+            if this_env_is_mw_series and is_online_policy:
                 package_x.append(
                     logger.test_data["package_x"][i]
-                    if has_logger
+                    if is_online_policy
                     else runner.episode_xs[i]  # type: ignore
                 )
         # 关闭eval_envs和runner
         if hasattr(runner, "eval_envs") and runner.eval_envs is not None:
             runner.eval_envs.close()
         runner.close()
-
-        import numpy as np
 
         end_time = time.time()
 
@@ -333,19 +339,6 @@ def eval(
                 "terminate_cnt": terminate_cnt,
                 "avg_terminate_at": sum(early_terminate_arr) / len(early_terminate_arr),
                 "total_episodes": len(terminate_arr),
-                "angle_data_avg": sum(angle_flatten) / len(angle_flatten),
-                "angle_data_std": np.std(angle_flatten),
-                "angle_larger_than_5": sum([1 for angle in angle_flatten if angle > 5])
-                / len(angle_flatten),
-                "angle_larger_than_10": sum(
-                    [1 for angle in angle_flatten if angle > 10]
-                )
-                / len(angle_flatten),
-                "angle_larger_than_15": sum(
-                    [1 for angle in angle_flatten if angle > 15]
-                )
-                / len(angle_flatten),
-                "package_x": sum(package_x) / len(package_x),
                 "total_time": end_time - start_time,
                 "total_timesteps": sum(terminate_arr)
                 + (config.eval_settings.general.eval_episodes - terminate_cnt)
@@ -358,6 +351,23 @@ def eval(
                 # "angle_data": angle_flatten,
                 # "angle_data_grouped": angle_arr,
             }
+            if is_online_policy:
+                import numpy as np
+
+                return_result["angle_data_avg"] = sum(angle_flatten) / len(
+                    angle_flatten
+                )
+                return_result["angle_data_std"] = np.std(angle_flatten)
+                return_result["angle_larger_than_5"] = sum(
+                    [1 for angle in angle_flatten if angle > 5]
+                ) / len(angle_flatten)
+                return_result["angle_larger_than_10"] = sum(
+                    [1 for angle in angle_flatten if angle > 10]
+                ) / len(angle_flatten)
+                return_result["angle_larger_than_15"] = sum(
+                    [1 for angle in angle_flatten if angle > 15]
+                ) / len(angle_flatten)
+                return_result["package_x"] = sum(package_x) / len(package_x)
         elif this_env == Env.MAPDN:
             return_result = {
                 "desc": f"[{algorithm_name}]<{scenario_name}>_{config.eval_scenario.name}_{_to_dict(config.eval_scenario).get('desc', 'original')}",
@@ -367,45 +377,44 @@ def eval(
                 "terminate_cnt": terminate_cnt,
                 "avg_terminate_at": sum(early_terminate_arr) / len(early_terminate_arr),
                 "total_episodes": len(terminate_arr),
-                "percentage_of_v_out_of_control": sum(
-                    logger.test_data["percentage_of_v_out_of_control"]
-                )
-                / len(logger.test_data["percentage_of_v_out_of_control"]),
-                "percentage_of_lower_than_lower_v": sum(
-                    logger.test_data["percentage_of_lower_than_lower_v"]
-                )
-                / len(logger.test_data["percentage_of_lower_than_lower_v"]),
-                "percentage_of_higher_than_upper_v": sum(
-                    logger.test_data["percentage_of_higher_than_upper_v"]
-                )
-                / len(logger.test_data["percentage_of_higher_than_upper_v"]),
-                "totally_controllable_ratio": sum(
-                    logger.test_data["totally_controllable_ratio"]
-                )
-                / len(logger.test_data["totally_controllable_ratio"]),
-                "average_voltage_deviation": sum(
-                    logger.test_data["average_voltage_deviation"]
-                )
-                / len(logger.test_data["average_voltage_deviation"]),
-                "average_voltage": sum(logger.test_data["average_voltage"])
-                / len(logger.test_data["average_voltage"]),
-                "max_voltage_drop_deviation": sum(
-                    logger.test_data["max_voltage_drop_deviation"]
-                )
-                / len(logger.test_data["max_voltage_drop_deviation"]),
-                "max_voltage_rise_deviation": sum(
-                    logger.test_data["max_voltage_rise_deviation"]
-                )
-                / len(logger.test_data["max_voltage_rise_deviation"]),
-                "total_line_loss": sum(logger.test_data["total_line_loss"])
-                / len(logger.test_data["total_line_loss"]),
-                "q_loss": sum(logger.test_data["q_loss"])
-                / len(logger.test_data["q_loss"]),
-                "destroy": sum(logger.test_data["destroy"])
-                / len(logger.test_data["destroy"]),
-                "sum_rewards": sum(logger.test_data["sum_rewards"])
-                / len(logger.test_data["sum_rewards"]),
             }
+            if is_online_policy:
+                return_result["percentage_of_v_out_of_control"] = sum(
+                    logger.test_data["percentage_of_v_out_of_control"]
+                ) / len(logger.test_data["percentage_of_v_out_of_control"])
+                return_result["percentage_of_lower_than_lower_v"] = sum(
+                    logger.test_data["percentage_of_lower_than_lower_v"]
+                ) / len(logger.test_data["percentage_of_lower_than_lower_v"])
+                return_result["percentage_of_higher_than_upper_v"] = sum(
+                    logger.test_data["percentage_of_higher_than_upper_v"]
+                ) / len(logger.test_data["percentage_of_higher_than_upper_v"])
+                return_result["totally_controllable_ratio"] = sum(
+                    logger.test_data["totally_controllable_ratio"]
+                ) / len(logger.test_data["totally_controllable_ratio"])
+                return_result["average_voltage_deviation"] = sum(
+                    logger.test_data["average_voltage_deviation"]
+                ) / len(logger.test_data["average_voltage_deviation"])
+                return_result["average_voltage"] = sum(
+                    logger.test_data["average_voltage"]
+                ) / len(logger.test_data["average_voltage"])
+                return_result["max_voltage_drop_deviation"] = sum(
+                    logger.test_data["max_voltage_drop_deviation"]
+                ) / len(logger.test_data["max_voltage_drop_deviation"])
+                return_result["max_voltage_rise_deviation"] = sum(
+                    logger.test_data["max_voltage_rise_deviation"]
+                ) / len(logger.test_data["max_voltage_rise_deviation"])
+                return_result["total_line_loss"] = sum(
+                    logger.test_data["total_line_loss"]
+                ) / len(logger.test_data["total_line_loss"])
+                return_result["q_loss"] = sum(logger.test_data["q_loss"]) / len(
+                    logger.test_data["q_loss"]
+                )
+                return_result["destroy"] = sum(logger.test_data["destroy"]) / len(
+                    logger.test_data["destroy"]
+                )
+                return_result["sum_rewards"] = sum(
+                    logger.test_data["sum_rewards"]
+                ) / len(logger.test_data["sum_rewards"])
         elif this_env == Env.SUMO or this_env == Env.SUMO_LLM:
             return_result = {
                 "desc": f"[{algorithm_name}]<{scenario_name}>_{config.eval_scenario.name}_{_to_dict(config.eval_scenario).get('desc', 'original')}",
@@ -414,11 +423,11 @@ def eval(
                 "scenario": config.eval_scenario.name,
                 "tw_bigger_than_1000": len(logger.test_data["tw_bigger_than_1000"]),
                 "tw_bigger_than_1000_avg": sum(logger.test_data["tw_bigger_than_1000"])
-                / len(logger.test_data["tw_bigger_than_1000"]),
+                / (len(logger.test_data["tw_bigger_than_1000"]) + 1),
                 "system_total_waiting_time": sum(
                     logger.test_data["system_total_waiting_time"]
                 )
-                / len(logger.test_data["system_total_waiting_time"]),
+                / (len(logger.test_data["system_total_waiting_time"]) + 1),
                 "tw_bigger_than_1000_max": max(
                     logger.test_data["system_total_waiting_time"]
                 ),
@@ -495,7 +504,28 @@ def main(cfg: EvalConfig):
         os.makedirs(save_dir, exist_ok=True)
 
         # 保存为JSON文件
-        json_path = os.path.join(save_dir, "result.json")
+        """
+        处理result中的numpy类型（如np.int32），将其转换为Python原生类型，确保可以被json序列化
+        """
+        import numpy as np
+
+        def convert_np(obj):
+            """
+            递归地将dict/list中的numpy类型转换为Python原生类型
+            """
+            if isinstance(obj, dict):
+                return {k: convert_np(v) for k, v in obj.items()}
+            elif isinstance(obj, list):
+                return [convert_np(v) for v in obj]
+            elif isinstance(obj, np.generic):
+                return obj.item()
+            else:
+                return obj
+
+        result = convert_np(result)
+        json_path = os.path.join(
+            save_dir, f"{env_name}_{algorithm_name}_{scenario_name}.json"
+        )
         with open(json_path, "w", encoding="utf-8") as f:
             json.dump(result, f, ensure_ascii=False, indent=2)
 

@@ -49,6 +49,10 @@ class PettingZooMWLLMEnv(PettingZooMWEnv, HarlEnvWithLLM):
             self.llm_manager._llm_decision_in_env(
                 {"explanation": "test", "target_vs": [0.8, 0.8, 0.8]}
             )
+
+            # import random
+            # should_use_llm = random.random() < 0.2
+            # if should_use_llm:
             if "坡道检测：正在上坡" in original_prompt:
                 print(f"---------------Step {self.cur_step}-----------------")
                 # print(f"original_prompt: {original_prompt}")

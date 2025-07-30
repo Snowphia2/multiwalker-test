@@ -28,24 +28,45 @@ class PettingZooSumoLLMEnv(PettingZooSumoEnv, HarlEnvWithLLM):
         super().__init__(*args, **kwargs)
         self.llm_manager = self._init_llm_manager()
         self.llm_frequency = 200
+        self.should_use_predefined_signal_phases = False
 
     def _init_llm_manager(self) -> PettingZooSumoLLMManager:
         return PettingZooSumoLLMManager(self, self.env, self.env.aec_env.env.env, None)
+
+    def reset(self, *args, **kwargs):
+        self.should_use_predefined_signal_phases = False
+        self.traffic_info = {
+            "A2": [0, 0, 0, 0],
+            "B2": [0, 0, 0, 0],
+            "now_A2": 0,
+            "now_B2": 0,
+        }
+        return super().reset(*args, **kwargs)
 
     def step(self, actions):
         actions_wrapped = self.wrap(actions.flatten().tolist())
         _override_signal = {
             # "A2": [-1, -1, 25, 15],
-            "B2": [-1, -1, 45, -1],
+            "B2": [-1, -1, 35, -1],
         }
 
         if self.cur_step % self.llm_frequency == 0:
+            print(f"llm at: ts={self.cur_step}")
             sumo_pz_env: SumoEnvironmentPZWithGlobalState = self._get_sumo_pz_env()
             obs = [sumo_pz_env.observe(agent) for agent in self.agents]
             start_time = time.time()
             self.llm_manager.execute_llm(obs, self.global_state)
             end_time = time.time()
             print(f"llm time: {end_time - start_time}")
+
+        import random
+
+        random_initiated = random.random() < 0.5
+
+        if random_initiated:
+            self.should_use_predefined_signal_phases = True
+        else:
+            self.should_use_predefined_signal_phases = False
 
         if not self.should_use_predefined_signal_phases:
             self.traffic_info = {
@@ -77,6 +98,11 @@ class PettingZooSumoLLMEnv(PettingZooSumoEnv, HarlEnvWithLLM):
                     )
                     self.traffic_info[agent][now_green_phase] = 0
                     self.traffic_info[f"now_{agent}"] = proposed_next_action
+        import numpy as np
 
-        obs, state, reward, terminated, info, available_actions = super().step(actions)
+        obs, state, reward, terminated, info, available_actions = super().step(
+            # actions,
+            np.array(self.unwrap(actions_wrapped))
+        )
+
         return obs, state, reward, terminated, info, available_actions

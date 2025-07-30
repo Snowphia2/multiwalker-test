@@ -1,6 +1,9 @@
 run_group: latest
 save_group: latest
 
+use_custom_eval_configs: False
+custom_eval_configs_folder: ""
+
 wandb:
   use_wandb: True
   project: mw_harl_new

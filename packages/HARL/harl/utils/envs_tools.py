@@ -219,9 +219,9 @@ def make_eval_env(env_name, seed, n_threads, env_args):
                 env_args1 = from_dict(SumoEnvConfig, env_args)
                 import random
 
-                random.seed(seed + rank)
-                begin_time = random.randint(0, 12000)
-                # begin_time = 1700
+                # random.seed(seed + rank)
+                # begin_time = random.randint(0, 11000)
+                begin_time = 1700
                 # print(f"rank: {rank}, begin_time: {begin_time}")
                 env_args1.begin_time = begin_time
 

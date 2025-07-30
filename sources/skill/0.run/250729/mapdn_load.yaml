@@ -3,13 +3,13 @@ defaults:
   - _self_
 
 run_group: 250722_llm_env
-save_group: mapdn/best # 0710/0322
+save_group: handpicked/mapdn/best # 0710/0322
 steps:
   - type: eval
     multirun: False
     config_name: mapdn
     args:
-      - algorithm=happo
+      - algorithm=happo #sac
       - ++environment.env_tweak.tweak_types=[]
       - eval_scenario=mapdn/mapdn_load_change
 hydra:

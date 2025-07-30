@@ -47,6 +47,9 @@ class HydraRunConfig:
     steps: List[HydraStepConfig]
     wandb: WandbConfig
 
+    use_custom_eval_configs: bool = False
+    custom_eval_configs_folder: str = ""
+
 
 @hydra.main(config_path="../0.run", config_name="default", version_base=None)
 def main(config: HydraRunConfig):
@@ -79,6 +82,11 @@ def main(config: HydraRunConfig):
         elif HydraStepType(step.type) == HydraStepType.eval:
             file_cmd = "uv run python -m sources.skill.code.eval "
             multirun_cmd = "--multirun" if step.multirun else ""
+            folder_cmd = (
+                f"--config-path={config.custom_eval_configs_folder}"
+                if config.use_custom_eval_configs
+                else ""
+            )
             args_cmd = " ".join(step.args)
 
             config_cmd = (
@@ -86,7 +94,7 @@ def main(config: HydraRunConfig):
                 if step.config_name is None
                 else f"--config-name='{step.config_name}'"
             )
-            return f"{file_cmd} {config_cmd} {multirun_cmd} {args_cmd} {group_cmd} {wandb_cmd}"
+            return f"{file_cmd} {folder_cmd} {config_cmd} {multirun_cmd} {args_cmd} {group_cmd} {wandb_cmd}"
         elif HydraStepType(step.type) == HydraStepType.llm_eval:
             file_cmd = "uv run python -m sources.skill.code.llm_run "
             multirun_cmd = "--multirun" if step.multirun else ""
