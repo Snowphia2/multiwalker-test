@@ -10,6 +10,7 @@ from harl.envs.lag.lag_logger import LAGLogger
 from harl.envs.pettingzoo_mw.pettingzoo_mw_logger import PettingZooMWLogger
 from harl.envs.sumo.pettingzoo_sumo_logger import PettingZooSumoLogger
 from harl.envs.pettingzoo_mw_llm.pettingzoo_mw_llm_logger import PettingZooMWLLMLogger
+from harl.envs.sumo_llm.pettingzoo_sumo_llm_logger import PettingZooSumoLLMLogger
 from harl.envs.mapdn.mapdn_logger import MAPDNLogger
 
 FLAGS = flags.FLAGS
@@ -27,5 +28,6 @@ LOGGER_REGISTRY = {
     "pettingzoo_mw": PettingZooMWLogger,
     "pettingzoo_mw_llm": PettingZooMWLLMLogger,
     "sumo": PettingZooSumoLogger,
+    "sumo_llm": PettingZooSumoLLMLogger,
     "mapdn": MAPDNLogger,
 }

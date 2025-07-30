@@ -10,7 +10,6 @@ from harl.envs.pettingzoo_mw.pettingzoo_mw_env import (
 from harl.envs.pettingzoo_mw.walker.multiwalker.mw_move import (
     MultiWalkerEnv as _env_move,
 )
-
 from prompt_template import PromptTemplate
 from .agent import generate_prompt
 
@@ -18,16 +17,20 @@ import rich
 
 
 @final
-class PettingZooMWLLMManager(LLMManager[TEnv, TEnvRaw, ObsType, StateType]):
+class PettingZooMWLLMManager(LLMManager[Any, TEnv, TEnvRaw, ObsType, StateType]):
     def __init__(
         self,
+        parent_env: Any,
         env: TEnv,
         real_env: TEnvRaw,
         llm_config: Union[LLMConfig, None],
     ):
-        super().__init__(env, real_env, llm_config)
+        from ..pettingzoo_mw_llm_env import PettingZooMWLLMEnv
 
-    def _translate_obses_and_global_state(
+        self.parent_env: PettingZooMWLLMEnv
+        super().__init__(parent_env, env, real_env, llm_config)
+
+    def _from_obs_to_prompt(
         self, obses: list[ObsType], global_state: StateType
     ) -> Union[tuple[dict[str, str], PromptTemplate], str]:
         llm_obses = obses

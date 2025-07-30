@@ -27,6 +27,7 @@ class Env(Enum):
     SUMO = "sumo"
     PETTINGZOO_MW = "pettingzoo_mw"
     PETTINGZOO_MW_LLM = "pettingzoo_mw_llm"
+    SUMO_LLM = "sumo_llm"
 
 
 def _to_harl_dict(
@@ -139,6 +140,8 @@ def eval(
         env_folder = "multiwalker"
     elif this_env == Env.SUMO:
         env_folder = "sumo"
+    elif this_env == Env.SUMO_LLM:
+        env_folder = "sumo"
     elif this_env == Env.MAPDN:
         env_folder = "mapdn"
     model_path = f"./results/models/{save_group}/{env_name}/{env_folder}/{algorithm_name}/[{algorithm_name}]<{scenario_name}>"
@@ -208,19 +211,34 @@ def eval(
         runner.close()
         # wandb.finish()
 
+    is_online_policy = hasattr(runner, "logger")
     start_time = time.time()
     # 4. render？还是eval？
     if config.eval_settings.functions.render:
 
         def _render():
             render_mode = "rgb_array"
-            (
-                rgb_array,
-                rewards_arr,
-                episode_obses_arr,
-                lidar_obs_arr,
-            ) = runner.render(render_mode)
+            if is_online_policy:
+                (
+                    rgb_array,
+                    rewards_arr,
+                    episode_obses_arr,
+                    lidar_obs_arr,
+                ) = runner.render(render_mode)
+            else:
+                (
+                    rgb_array,
+                    rewards_arr,
+                ) = runner.render(render_mode)
             config_name = f"[{algorithm_name}]<{env_name}>_{scenario_name}{name_suffix}"
+            if rgb_array is not None:
+                export_gif(
+                    config_name=config_name,
+                    frames_arr=rgb_array,
+                    rewards_arr=rewards_arr,
+                )
+            if not is_online_policy:
+                return
             # 保存episode_obses_arr到JSON文件
             if (
                 episode_obses_arr is not None
@@ -253,12 +271,6 @@ def eval(
                     json.dump(lidar_obs_arr, f, ensure_ascii=False)
 
                 rich.print(f"Episode observations saved to: {json_path}")
-            if rgb_array is not None:
-                export_gif(
-                    config_name=config_name,
-                    frames_arr=rgb_array,
-                    rewards_arr=rewards_arr,
-                )
 
         _render()
         if hasattr(runner, "eval_envs") and runner.eval_envs is not None:
@@ -268,9 +280,8 @@ def eval(
         print(f"Render time: {end_time - start_time} seconds")
     else:
         # 根据是否是off-policy，选择不同的eval方式
-        has_logger = hasattr(runner, "logger")
         angle_arr = []
-        if has_logger:
+        if is_online_policy:
             runner = cast(OnPolicyMARunner, runner)
             logger: PettingZooMWLogger = runner.logger
             logger.is_testing = (
@@ -300,18 +311,16 @@ def eval(
             ):  # +2 去除一点边际问题
                 terminate_cnt += 1
                 early_terminate_arr.append(terminate_arr[i])
-            if this_env_is_mw_series:
+            if this_env_is_mw_series and is_online_policy:
                 package_x.append(
                     logger.test_data["package_x"][i]
-                    if has_logger
+                    if is_online_policy
                     else runner.episode_xs[i]  # type: ignore
                 )
         # 关闭eval_envs和runner
         if hasattr(runner, "eval_envs") and runner.eval_envs is not None:
             runner.eval_envs.close()
         runner.close()
-
-        import numpy as np
 
         end_time = time.time()
 
@@ -330,19 +339,6 @@ def eval(
                 "terminate_cnt": terminate_cnt,
                 "avg_terminate_at": sum(early_terminate_arr) / len(early_terminate_arr),
                 "total_episodes": len(terminate_arr),
-                "angle_data_avg": sum(angle_flatten) / len(angle_flatten),
-                "angle_data_std": np.std(angle_flatten),
-                "angle_larger_than_5": sum([1 for angle in angle_flatten if angle > 5])
-                / len(angle_flatten),
-                "angle_larger_than_10": sum(
-                    [1 for angle in angle_flatten if angle > 10]
-                )
-                / len(angle_flatten),
-                "angle_larger_than_15": sum(
-                    [1 for angle in angle_flatten if angle > 15]
-                )
-                / len(angle_flatten),
-                "package_x": sum(package_x) / len(package_x),
                 "total_time": end_time - start_time,
                 "total_timesteps": sum(terminate_arr)
                 + (config.eval_settings.general.eval_episodes - terminate_cnt)
@@ -350,9 +346,28 @@ def eval(
                 "total_timesteps1": sum(terminate_arr)
                 + (config.eval_settings.general.eval_episodes - len(terminate_arr))
                 * config.environment.env_tweak.max_cycles,
-                "angle_data": angle_flatten,
-                "angle_data_grouped": angle_arr,
+                "terminate_arr": terminate_arr,
+                "total_timesteps1": sum(terminate_arr),
+                # "angle_data": angle_flatten,
+                # "angle_data_grouped": angle_arr,
             }
+            if is_online_policy:
+                import numpy as np
+
+                return_result["angle_data_avg"] = sum(angle_flatten) / len(
+                    angle_flatten
+                )
+                return_result["angle_data_std"] = np.std(angle_flatten)
+                return_result["angle_larger_than_5"] = sum(
+                    [1 for angle in angle_flatten if angle > 5]
+                ) / len(angle_flatten)
+                return_result["angle_larger_than_10"] = sum(
+                    [1 for angle in angle_flatten if angle > 10]
+                ) / len(angle_flatten)
+                return_result["angle_larger_than_15"] = sum(
+                    [1 for angle in angle_flatten if angle > 15]
+                ) / len(angle_flatten)
+                return_result["package_x"] = sum(package_x) / len(package_x)
         elif this_env == Env.MAPDN:
             return_result = {
                 "desc": f"[{algorithm_name}]<{scenario_name}>_{config.eval_scenario.name}_{_to_dict(config.eval_scenario).get('desc', 'original')}",
@@ -401,7 +416,7 @@ def eval(
                 "sum_rewards": sum(logger.test_data["sum_rewards"])
                 / len(logger.test_data["sum_rewards"]),
             }
-        elif this_env == Env.SUMO:
+        elif this_env == Env.SUMO or this_env == Env.SUMO_LLM:
             return_result = {
                 "desc": f"[{algorithm_name}]<{scenario_name}>_{config.eval_scenario.name}_{_to_dict(config.eval_scenario).get('desc', 'original')}",
                 "algo": algorithm_name,
@@ -409,15 +424,18 @@ def eval(
                 "scenario": config.eval_scenario.name,
                 "tw_bigger_than_1000": len(logger.test_data["tw_bigger_than_1000"]),
                 "tw_bigger_than_1000_avg": sum(logger.test_data["tw_bigger_than_1000"])
-                / len(logger.test_data["tw_bigger_than_1000"]),
+                / (len(logger.test_data["tw_bigger_than_1000"]) + 1),
                 "system_total_waiting_time": sum(
                     logger.test_data["system_total_waiting_time"]
                 )
-                / len(logger.test_data["system_total_waiting_time"]),
+                / (len(logger.test_data["system_total_waiting_time"]) + 1),
                 "tw_bigger_than_1000_max": max(
                     logger.test_data["system_total_waiting_time"]
                 ),
             }
+            # if this_env == Env.SUMO_LLM:
+            # return_result["llm_time"] = sum(logger.test_data["llm_time"])
+            # / len(logger.test_data["llm_time"])
         else:
             return_result = {
                 "desc": f"[{algorithm_name}]<{scenario_name}>_{config.eval_scenario.name}_{_to_dict(config.eval_scenario).get('desc', 'original')}",
@@ -487,6 +505,25 @@ def main(cfg: EvalConfig):
         os.makedirs(save_dir, exist_ok=True)
 
         # 保存为JSON文件
+        """
+        处理result中的numpy类型（如np.int32），将其转换为Python原生类型，确保可以被json序列化
+        """
+        import numpy as np
+
+        def convert_np(obj):
+            """
+            递归地将dict/list中的numpy类型转换为Python原生类型
+            """
+            if isinstance(obj, dict):
+                return {k: convert_np(v) for k, v in obj.items()}
+            elif isinstance(obj, list):
+                return [convert_np(v) for v in obj]
+            elif isinstance(obj, np.generic):
+                return obj.item()
+            else:
+                return obj
+
+        result = convert_np(result)
         json_path = os.path.join(save_dir, "result.json")
         with open(json_path, "w", encoding="utf-8") as f:
             json.dump(result, f, ensure_ascii=False, indent=2)
