@@ -377,45 +377,44 @@ def eval(
                 "terminate_cnt": terminate_cnt,
                 "avg_terminate_at": sum(early_terminate_arr) / len(early_terminate_arr),
                 "total_episodes": len(terminate_arr),
-                "percentage_of_v_out_of_control": sum(
-                    logger.test_data["percentage_of_v_out_of_control"]
-                )
-                / len(logger.test_data["percentage_of_v_out_of_control"]),
-                "percentage_of_lower_than_lower_v": sum(
-                    logger.test_data["percentage_of_lower_than_lower_v"]
-                )
-                / len(logger.test_data["percentage_of_lower_than_lower_v"]),
-                "percentage_of_higher_than_upper_v": sum(
-                    logger.test_data["percentage_of_higher_than_upper_v"]
-                )
-                / len(logger.test_data["percentage_of_higher_than_upper_v"]),
-                "totally_controllable_ratio": sum(
-                    logger.test_data["totally_controllable_ratio"]
-                )
-                / len(logger.test_data["totally_controllable_ratio"]),
-                "average_voltage_deviation": sum(
-                    logger.test_data["average_voltage_deviation"]
-                )
-                / len(logger.test_data["average_voltage_deviation"]),
-                "average_voltage": sum(logger.test_data["average_voltage"])
-                / len(logger.test_data["average_voltage"]),
-                "max_voltage_drop_deviation": sum(
-                    logger.test_data["max_voltage_drop_deviation"]
-                )
-                / len(logger.test_data["max_voltage_drop_deviation"]),
-                "max_voltage_rise_deviation": sum(
-                    logger.test_data["max_voltage_rise_deviation"]
-                )
-                / len(logger.test_data["max_voltage_rise_deviation"]),
-                "total_line_loss": sum(logger.test_data["total_line_loss"])
-                / len(logger.test_data["total_line_loss"]),
-                "q_loss": sum(logger.test_data["q_loss"])
-                / len(logger.test_data["q_loss"]),
-                "destroy": sum(logger.test_data["destroy"])
-                / len(logger.test_data["destroy"]),
-                "sum_rewards": sum(logger.test_data["sum_rewards"])
-                / len(logger.test_data["sum_rewards"]),
             }
+            if is_online_policy:
+                return_result["percentage_of_v_out_of_control"] = sum(
+                    logger.test_data["percentage_of_v_out_of_control"]
+                ) / len(logger.test_data["percentage_of_v_out_of_control"])
+                return_result["percentage_of_lower_than_lower_v"] = sum(
+                    logger.test_data["percentage_of_lower_than_lower_v"]
+                ) / len(logger.test_data["percentage_of_lower_than_lower_v"])
+                return_result["percentage_of_higher_than_upper_v"] = sum(
+                    logger.test_data["percentage_of_higher_than_upper_v"]
+                ) / len(logger.test_data["percentage_of_higher_than_upper_v"])
+                return_result["totally_controllable_ratio"] = sum(
+                    logger.test_data["totally_controllable_ratio"]
+                ) / len(logger.test_data["totally_controllable_ratio"])
+                return_result["average_voltage_deviation"] = sum(
+                    logger.test_data["average_voltage_deviation"]
+                ) / len(logger.test_data["average_voltage_deviation"])
+                return_result["average_voltage"] = sum(
+                    logger.test_data["average_voltage"]
+                ) / len(logger.test_data["average_voltage"])
+                return_result["max_voltage_drop_deviation"] = sum(
+                    logger.test_data["max_voltage_drop_deviation"]
+                ) / len(logger.test_data["max_voltage_drop_deviation"])
+                return_result["max_voltage_rise_deviation"] = sum(
+                    logger.test_data["max_voltage_rise_deviation"]
+                ) / len(logger.test_data["max_voltage_rise_deviation"])
+                return_result["total_line_loss"] = sum(
+                    logger.test_data["total_line_loss"]
+                ) / len(logger.test_data["total_line_loss"])
+                return_result["q_loss"] = sum(logger.test_data["q_loss"]) / len(
+                    logger.test_data["q_loss"]
+                )
+                return_result["destroy"] = sum(logger.test_data["destroy"]) / len(
+                    logger.test_data["destroy"]
+                )
+                return_result["sum_rewards"] = sum(
+                    logger.test_data["sum_rewards"]
+                ) / len(logger.test_data["sum_rewards"])
         elif this_env == Env.SUMO or this_env == Env.SUMO_LLM:
             return_result = {
                 "desc": f"[{algorithm_name}]<{scenario_name}>_{config.eval_scenario.name}_{_to_dict(config.eval_scenario).get('desc', 'original')}",
