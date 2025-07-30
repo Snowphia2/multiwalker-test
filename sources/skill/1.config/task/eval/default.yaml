@@ -31,7 +31,7 @@ eval_settings:
     result_file_name: hi
 
     # 是否渲染
-    render: False
+    render: True
     render_episodes: 2
 
     # 是否进行ablation

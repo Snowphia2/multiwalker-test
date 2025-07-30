@@ -3,7 +3,7 @@ defaults:
   - _self_
 
 run_group: 250708_test
-save_group: llm/1659 # 0710/0322 "./results/models/0716/1659"
+save_group: best_mw # 0710/0322 "./results/models/0716/1659"
 # save_group: 0711/0109
 steps:
   # - type: eval
@@ -18,10 +18,10 @@ steps:
     config_name: default
     multirun: False
     args:
-      - ++environment.env_tweak.tweak_types=[max_cycles,terminate_reward,reward_factor]
+      - ++environment.env_tweak.tweak_types=[]
       - ++environment.env_tweak.max_cycles=1000
       - ++environment.env_tweak.terminate_reward=-10.0
-      - ++environment.env_tweak.reward_factor=0.5
+    #  - ++environment.env_tweak.reward_factor=0.5
 
 hydra:
   searchpath: 
