@@ -523,7 +523,9 @@ def main(cfg: EvalConfig):
                 return obj
 
         result = convert_np(result)
-        json_path = os.path.join(save_dir, "result.json")
+        json_path = os.path.join(
+            save_dir, f"{env_name}_{algorithm_name}_{scenario_name}.json"
+        )
         with open(json_path, "w", encoding="utf-8") as f:
             json.dump(result, f, ensure_ascii=False, indent=2)
 
