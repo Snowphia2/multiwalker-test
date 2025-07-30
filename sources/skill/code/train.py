@@ -57,11 +57,11 @@ def _to_harl_dict(
     # ----每个env可以在这里做特殊操作---
     # 至少要修改episode_length
 
-    if env_name == "pettingzoo_mw":
+    if env_name == "pettingzoo_mw" or env_name == "pettingzoo_mw_llm":
         from .types.environment.type_multiwalker import multiwalker_customize_dict
 
         algo_dict, env_dict = multiwalker_customize_dict(cfg, algo_dict, env_dict)
-    elif env_name == "sumo":
+    elif env_name == "sumo" or env_name == "sumo_llm":
         from .types.environment.type_sumo import sumo_customize_dict
 
         algo_dict, env_dict = sumo_customize_dict(cfg, algo_dict, env_dict, save_group)

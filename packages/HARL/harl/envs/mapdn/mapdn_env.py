@@ -287,6 +287,10 @@ class MapdnHARLEnv(
         """
         self.cur_step += 1
         acts = actions.flatten().tolist()
+
+        # should_use_llm = random.random() < 0.2
+        # if should_use_llm:
+        # acts = [1] * self.n_agents
         # if self.cur_step >= 101 and self.cur_step <= 200:
         #     acts = [1] * self.n_agents
         obs, rew, term, trunc, info = self.env.step(acts)  # type: ignore
@@ -302,7 +306,7 @@ class MapdnHARLEnv(
         global_state = self.wrap(self.repeat(self.global_state))
         total_reward: float = sum([rew[agent] for agent in self.agents])
         rewards: list[list[float]] = [[total_reward]] * self.n_agents
-        # self.trigger_event()
+        self.trigger_event()
 
         return (
             self.unwrap(obs),

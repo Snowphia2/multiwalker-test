@@ -29,7 +29,7 @@ class PettingZooMWLLMEnv(PettingZooMWEnv, HarlEnvWithLLM):
         )
 
     def _init_llm_manager(self) -> PettingZooMWLLMManager:
-        return PettingZooMWLLMManager(self.env, self.raw_env.env, None)
+        return PettingZooMWLLMManager(self, self.env, self.raw_env.env, None)
 
     def step(
         self, actions: ActionType
@@ -45,12 +45,14 @@ class PettingZooMWLLMEnv(PettingZooMWEnv, HarlEnvWithLLM):
         if self.cur_step % self.llm_frequency == 0:
             start_time = time.time()
 
-            original_prompt: str = self.llm_manager._translate_obses_and_global_state(
-                obs, state[0]
-            )  # type: ignore
+            original_prompt: str = self.llm_manager._from_obs_to_prompt(obs, state[0])  # type: ignore
             self.llm_manager._llm_decision_in_env(
                 {"explanation": "test", "target_vs": [0.8, 0.8, 0.8]}
             )
+
+            # import random
+            # should_use_llm = random.random() < 0.2
+            # if should_use_llm:
             if "坡道检测：正在上坡" in original_prompt:
                 print(f"---------------Step {self.cur_step}-----------------")
                 # print(f"original_prompt: {original_prompt}")

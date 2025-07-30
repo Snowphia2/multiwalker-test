@@ -111,6 +111,16 @@ def make_train_env(env_name, seed, n_threads, env_args):
                 env_args1 = from_dict(SumoEnvConfig, env_args)
 
                 env = PettingZooSumoEnv(env_args1)
+            elif env_name == "sumo_llm":
+                from harl.envs.sumo_llm.pettingzoo_sumo_llm_env import (
+                    PettingZooSumoLLMEnv,
+                )
+
+                from harl.envs.sumo.pettingzoo_sumo_env import SumoEnvConfig
+
+                env_args1 = from_dict(SumoEnvConfig, env_args)
+
+                env = PettingZooSumoLLMEnv(env_args1)
             elif env_name == "mapdn":
                 from harl.envs.mapdn.mapdn_env import MapdnHARLEnv, MapdnEnvConfig
 
@@ -199,6 +209,23 @@ def make_eval_env(env_name, seed, n_threads, env_args):
                 env_args1.begin_time = begin_time
 
                 env = PettingZooSumoEnv(env_args1)
+            elif env_name == "sumo_llm":
+                from harl.envs.sumo_llm.pettingzoo_sumo_llm_env import (
+                    PettingZooSumoLLMEnv,
+                )
+
+                from harl.envs.sumo.pettingzoo_sumo_env import SumoEnvConfig
+
+                env_args1 = from_dict(SumoEnvConfig, env_args)
+                import random
+
+                # random.seed(seed + rank)
+                # begin_time = random.randint(0, 11000)
+                begin_time = 1700
+                # print(f"rank: {rank}, begin_time: {begin_time}")
+                env_args1.begin_time = begin_time
+
+                env = PettingZooSumoLLMEnv(env_args1)
             elif env_name == "mapdn":
                 from harl.envs.mapdn.mapdn_env import MapdnHARLEnv, MapdnEnvConfig
 
@@ -279,6 +306,14 @@ def make_render_env(env_name, seed, env_args):
 
         env = PettingZooSumoEnv(env_args1)
         env.seed(seed * 60000)
+    elif env_name == "sumo_llm":
+        from harl.envs.sumo_llm.pettingzoo_sumo_llm_env import PettingZooSumoLLMEnv
+        from harl.envs.sumo.pettingzoo_sumo_env import SumoEnvConfig
+
+        env_args1 = from_dict(SumoEnvConfig, env_args)
+        env_args1.render_mode = "rgb_array"
+        env = PettingZooSumoLLMEnv(env_args1)
+        env.seed(seed * 60000)
     elif env_name == "mapdn":
         from harl.envs.mapdn.mapdn_env import MapdnHARLEnv, MapdnEnvConfig
 
@@ -353,7 +388,14 @@ def get_num_agents(env, env_args, envs):
         return envs.n_agents
     elif env == "sumo":
         return envs.n_agents
+    elif env == "sumo_llm":
+        return envs.n_agents
     elif env == "pettingzoo_mw_llm":
         return envs.n_agents
     elif env == "mapdn":
+        return envs.n_agents
+    else:
+        print(
+            f"[WARNING] env {env} not set its get_num_agents() in envs_tools.py; using env.n_agents as default."
+        )
         return envs.n_agents

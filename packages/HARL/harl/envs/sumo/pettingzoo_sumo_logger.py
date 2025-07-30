@@ -46,7 +46,7 @@ class PettingZooSumoLogger(BaseLogger):
                 self.test_data["system_total_waiting_time"].append(
                     eval_infos[i][0]["system_total_waiting_time"]
                 )
-            if eval_infos[i][0]["system_total_waiting_time"] > 3000:
+            if eval_infos[i][0]["system_total_waiting_time"] > 2000:
                 self.test_data["tw_bigger_than_1000"].append(
                     eval_infos[i][0]["system_total_waiting_time"]
                 )

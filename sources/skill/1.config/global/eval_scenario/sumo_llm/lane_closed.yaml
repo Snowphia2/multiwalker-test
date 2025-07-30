@@ -2,7 +2,6 @@ name: lane_closed
 desc: 车道封闭
 events:
   - event_id: lane_closed
-    lasting: True
     should_trigger_by_given_timestep: true
     given_timestep_trigger_args:
       trigger_at_timestep: 20

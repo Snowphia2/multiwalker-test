@@ -1,4 +1,4 @@
-from typing import Union, Any, Generic
+from typing import Union, Any, Generic, TypeVar
 from dataclasses import dataclass
 from abc import ABC, abstractmethod
 from .harl_env_with_events import (
@@ -25,7 +25,11 @@ class LLMConfig:
     base_url: str
 
 
-class LLMManager(ABC, Generic[TEnv, TEnvRaw, ObsType, StateType]):
+TParentEnv = TypeVar("TParentEnv", covariant=True)
+
+
+class LLMManager(ABC, Generic[TParentEnv, TEnv, TEnvRaw, ObsType, StateType]):
+    parent_env: TParentEnv
     env: TEnv
     real_env: TEnvRaw
     llm_client: OpenAI
@@ -34,10 +38,12 @@ class LLMManager(ABC, Generic[TEnv, TEnvRaw, ObsType, StateType]):
 
     def __init__(
         self,
+        parent_env: TParentEnv,
         env: TEnv,
         real_env: TEnvRaw,
         llm_config: Union[LLMConfig, None] = None,
     ):
+        self.parent_env = parent_env
         self.env = env
         self.real_env = real_env
         if llm_config is None:
@@ -81,7 +87,7 @@ class LLMManager(ABC, Generic[TEnv, TEnvRaw, ObsType, StateType]):
     def translate_obses(
         self, obses: list[ObsType], global_state: StateType
     ) -> tuple[str, dict[str, str], Union[PromptTemplate, None]]:
-        translate_result = self._translate_obses_and_global_state(obses, global_state)
+        translate_result = self._from_obs_to_prompt(obses, global_state)
         if isinstance(translate_result, tuple):
             semantic_infos, prompt_template = translate_result
             return (
@@ -123,7 +129,7 @@ class LLMManager(ABC, Generic[TEnv, TEnvRaw, ObsType, StateType]):
         self._llm_decision_in_env(decisions)
 
     @abstractmethod
-    def _translate_obses_and_global_state(
+    def _from_obs_to_prompt(
         self, obses: list[ObsType], global_state: StateType
     ) -> Union[tuple[dict[str, str], PromptTemplate], str]:
         """
@@ -150,7 +156,7 @@ class HarlEnvWithLLM(
     HarlEnvWithEvents[TAgentId, TEnv, TArgs, ObsType, ActionType, StateType, TEnvRaw],
     ABC,
 ):
-    llm_manager: LLMManager[TEnv, TEnvRaw, ObsType, StateType]
+    llm_manager: LLMManager[HarlEnvWithEvents, TEnv, TEnvRaw, ObsType, StateType]
     llm_frequency: int
 
     def __init__(self, *args, **kwargs):
@@ -160,7 +166,9 @@ class HarlEnvWithLLM(
         self.llm_frequency = 50
 
     @abstractmethod
-    def _init_llm_manager(self) -> LLMManager[TEnv, TEnvRaw, ObsType, StateType]:
+    def _init_llm_manager(
+        self,
+    ) -> LLMManager[HarlEnvWithEvents, TEnv, TEnvRaw, ObsType, StateType]:
         pass
 
     def step(
