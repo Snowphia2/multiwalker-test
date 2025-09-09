@@ -356,6 +356,7 @@ class MultiWalkerEnv:
         max_cycles=500,
         render_mode=None,
         terrain_config=None,
+        disabled_walker_id=-1,
     ):
         """Initializes the `MultiWalkerEnv` class.
 
@@ -389,6 +390,7 @@ class MultiWalkerEnv:
         self.remove_on_fall = remove_on_fall
         self.terrain_length = terrain_length
         self.terrain_config = terrain_config
+        self.disabled_walker_id = disabled_walker_id
         self.seed_val = None
         self._seed()
         self.setup()
@@ -574,7 +576,7 @@ class MultiWalkerEnv:
             )
         done = [False] * self.n_walkers
 
-        disabled_agent_id = 0
+        disabled_agent_id = self.disabled_walker_id
         for i, (fallen, walker) in enumerate(zip(self.fallen_walkers, self.walkers)):
             if i == disabled_agent_id and fallen:
                 rewards[i] += self.fall_reward

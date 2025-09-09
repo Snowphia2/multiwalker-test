@@ -91,6 +91,7 @@ class PettingZooMWEnv(
             self.max_cycles = 500
             self.args["max_cycles"] = 501
         self.cur_step = 0
+        self.disabled_walker_id = self.args.get('disabled_walker_id', -1)
         # self.module = multiwalker_v9
         self.base_env, self.raw_env = env_with_raw(**self.args)
         self.multiwalker_env = self.raw_env.env
@@ -128,40 +129,40 @@ class PettingZooMWEnv(
         """
         return local_obs, global_state, rewards, dones, infos, available_actions
         """
-        # 修改
-        disabled_agent_id = 'walker_0'
-        disabled_id = int(disabled_agent_id.split('_')[-1])
+        if self.disabled_walker_id >= 0:
+            disabled_id = disabled_agent_id = f'walker_{self.disabled_walker_id}'
+            disabled_id = int(disabled_agent_id.split('_')[-1])
 
-        actions[disabled_id] = np.array([-15.0, -15.0, -15.0, -15.0])
-        obs, rew, term, trunc, info = self.env.step(self.wrap(list(actions)))
-        obs: ObsWrappedType
+            actions[disabled_id] = np.array([-15.0, -15.0, -15.0, -15.0])
+            obs, rew, term, trunc, info = self.env.step(self.wrap(list(actions)))
+            obs: ObsWrappedType
 
-        for agent_id in self.agents:
-            current_id_num = int(agent_id.split('_')[-1])
-            # 获取被禁用 agent 的左邻居的 ID
-            left_neighbor_id = f"walker_{disabled_id - 1}"
-            right_neighbor_id = f"walker_{disabled_id + 1}"
-            if current_id_num == disabled_id + 1:
-                # 确保这个左邻居真的存在于环境中
-                if left_neighbor_id in obs:
-                    # 核心步骤：将被禁用 agent 的左邻居观测信息，赋予给当前 agent 的左邻居观测
-                    obs[agent_id][24:26] = obs[left_neighbor_id][24:26]
-                else:
-                    obs[agent_id][24:26] = np.zeros_like(obs[agent_id][24:26])
-            elif current_id_num == disabled_id - 1:
-                    if right_neighbor_id in obs:
-                        obs[agent_id][26:28] = obs[right_neighbor_id][26:28]
-                # 如果被禁用 agent 是最左边的 (walker_0)
+            for agent_id in self.agents:
+                current_id_num = int(agent_id.split('_')[-1])
+                # 获取被禁用 agent 的左邻居的 ID
+                left_neighbor_id = f"walker_{disabled_id - 1}"
+                right_neighbor_id = f"walker_{disabled_id + 1}"
+                if current_id_num == disabled_id + 1:
+                    # 确保这个左邻居真的存在于环境中
+                    if left_neighbor_id in obs:
+                        # 核心步骤：将被禁用 agent 的左邻居观测信息，赋予给当前 agent 的左邻居观测
+                        obs[agent_id][24:26] = obs[left_neighbor_id][24:26]
                     else:
-                        obs[agent_id][26:28] = np.zeros_like(obs[agent_id][26:28])
-         
-         # 3. 强制清空被禁用 Agent 自己的所有观测
-            if agent_id == disabled_agent_id:
-                if agent_id in obs:
-                    obs[agent_id][:] = np.zeros_like(obs[agent_id])
-
-
-        # 修改结束
+                        obs[agent_id][24:26] = np.zeros_like(obs[agent_id][24:26])
+                elif current_id_num == disabled_id - 1:
+                        if right_neighbor_id in obs:
+                            obs[agent_id][26:28] = obs[right_neighbor_id][26:28]
+                    # 如果被禁用 agent 是最左边的 (walker_0)
+                        else:
+                            obs[agent_id][26:28] = np.zeros_like(obs[agent_id][26:28])
+            
+            # 3. 强制清空被禁用 Agent 自己的所有观测
+                if agent_id == disabled_agent_id:
+                    if agent_id in obs:
+                        obs[agent_id][:] = np.zeros_like(obs[agent_id])
+        else:
+            obs, rew, term, trunc, info = self.env.step(self.wrap(actions))
+            obs: ObsWrappedType
 
         self.cur_step += 1
 

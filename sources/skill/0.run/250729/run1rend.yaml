@@ -29,6 +29,7 @@ steps:
       - ++environment.env_tweak.terminate_reward=-10.0
       - ++environment.env_tweak.terminate_on_fall=false
       - ++environment.env_tweak.remove_on_fall=true
+      - ++environment.env_tweak.disabled_walker_id=2
     #  - ++environment.env_tweak.reward_factor=0.5
 
 hydra:
