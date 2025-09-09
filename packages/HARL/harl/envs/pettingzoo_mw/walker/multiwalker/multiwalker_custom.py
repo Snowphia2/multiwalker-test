@@ -229,6 +229,12 @@ class BipedalWalker(Agent):
         self.lidar = [LidarCallback() for _ in range(10)]
 
     def apply_action(self, action):
+    # 添加防御性检查
+        # 检查 joints 列表是否存在且不为空
+        if not hasattr(self, 'joints') or len(self.joints) == 0:
+            # 如果 joints 不存在或为空，直接返回，不执行任何操作
+            return
+
         self.joints[0].motorSpeed = float(self.speed_factor_hip * np.sign(action[0]))
         self.joints[0].maxMotorTorque = float(
             MOTORS_TORQUE * np.clip(np.abs(action[0]), 0, 1)
@@ -493,7 +499,9 @@ class MultiWalkerEnv:
         return self.observe(0)
 
     def get_thru_lidar_obs(self) -> list[list[np.ndarray]]:
-        return [walker.get_thru_lidar_obs() for walker in self.walkers]
+        # 添加第一行
+        valid_walkers = [walker for walker in self.walkers if walker.hull is not None]
+        return [walker.get_thru_lidar_obs() for walker in valid_walkers]
 
     def scroll_subroutine(self):
         xpos = np.zeros(self.n_walkers)
@@ -502,6 +510,8 @@ class MultiWalkerEnv:
         rewards = np.zeros(self.n_walkers)
         self.rewards_group = np.zeros((self.n_walkers, 4))
 
+        active_xpos = []
+
         for i in range(self.n_walkers):
             if self.walkers[i].hull is None:
                 obs.append(np.zeros_like(self.observation_space[i].low))
@@ -509,6 +519,9 @@ class MultiWalkerEnv:
             pos = self.walkers[i].hull.position
             x, y = pos.x, pos.y
             xpos[i] = x
+
+            if not self.fallen_walkers[i]:
+                active_xpos.append(x)
 
             walker_obs = self.walkers[i].get_observation()
             neighbor_obs = []
@@ -552,21 +565,26 @@ class MultiWalkerEnv:
         pkg_angle = self.package.angle
         rewards += -abs(pkg_angle) * 1
         self.rewards_group[:, 3] += -abs(pkg_angle) * 1
-        self.scroll = (
-            xpos.mean()
-            - VIEWPORT_W / SCALE / 5
-            - (self.n_walkers - 1) * WALKER_SEPERATION * TERRAIN_STEP
-        )
-
+        if len(active_xpos) > 0:
+            self.scroll = (
+                # xpos.mean(active_xpos)
+                np.mean(active_xpos)
+                - VIEWPORT_W / SCALE / 5
+                - (self.n_walkers - 1) * WALKER_SEPERATION * TERRAIN_STEP
+            )
         done = [False] * self.n_walkers
+
+        disabled_agent_id = 0
         for i, (fallen, walker) in enumerate(zip(self.fallen_walkers, self.walkers)):
-            if fallen:
+            if i == disabled_agent_id and fallen:
                 rewards[i] += self.fall_reward
                 if self.remove_on_fall:
                     walker._destroy()
                 if not self.terminate_on_fall:
                     rewards[i] += self.terminate_reward
                 done[i] = True
+
+        done = [False] * self.n_walkers
         if (
             (self.terminate_on_fall and np.sum(self.fallen_walkers) > 0)
             or self.game_over
@@ -583,9 +601,35 @@ class MultiWalkerEnv:
         return rewards, done, obs
 
     def step(self, action, agent_id, is_last):
+        # 添加检查，如果 agent 被移除，直接返回
+        
+        # disabled_agent_id = 2 
+        # # 如果当前 agent 是我们指定的 disabled agent
+        # if agent_id == disabled_agent_id:
+        #     # 核心逻辑：直接移除它
+        #     if self.walkers[agent_id].hull is not None:
+        #         self.walkers[agent_id]._destroy()
+        #         # 从列表中移除，确保和物理世界同步
+        #         self.walkers.pop(agent_id)
+        #         self.agents.pop(agent_id)
+        #     return  # 移除后，直接返回，不再执行后续代码
+
+        # # 如果当前 agent 是其他 agent
+        # else:
+        #     new_agent_id = agent_id
+        #     if agent_id > disabled_agent_id:
+        #         new_agent_id = agent_id - 1
+        #     # action is array of size 4
+        #     action = action.reshape(4)
+        #     # 尝试访问 walkers 列表
+        #     assert self.walkers[new_agent_id].hull is not None, new_agent_id
+        #     self.walkers[new_agent_id].apply_action(action)
+    
+        
+
         # action is array of size 4
         action = action.reshape(4)
-        assert self.walkers[agent_id].hull is not None, agent_id
+        # assert self.walkers[agent_id].hull is not None, agent_id
         self.walkers[agent_id].apply_action(action)
         if is_last:
             self.world.Step(1.0 / FPS, 6 * 30, 2 * 30)
@@ -615,10 +659,12 @@ class MultiWalkerEnv:
         return dict(zip(list(range(self.n_walkers)), self.last_dones))
 
     def get_last_obs(self):
+        # 添加第一行
+        valid_walkers = [walker for walker in self.walkers if walker.hull is not None]
         return dict(
             zip(
                 list(range(self.n_walkers)),
-                [walker.get_observation() for walker in self.walkers],
+                [walker.get_observation() for walker in valid_walkers],
             )
         )
 

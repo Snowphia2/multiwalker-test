@@ -5,13 +5,8 @@ name: pettingzoo_mw
 
 env_tweak: 
   n_walkers: 3
-<<<<<<< HEAD
-  max_cycles: 500
-  # reward_factor: 0.5
-=======
   max_cycles: 1000
-  reward_factor: 0.5
->>>>>>> c4b81c355988f33a5cb68a561d0e4d3deef9b9ba
+  # reward_factor: 0.5
   # move_idle_reward: 0.0
-  terminate_reward: -10.0
+  terminate_reward: -10.0 
 

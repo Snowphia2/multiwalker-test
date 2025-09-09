@@ -32,6 +32,7 @@ from .walker.multiwalker.mw_obs_package_mass_stable import (
 from .walker.multiwalker.mw_talk import MultiWalkerEnv as _env_talk
 from .walker.multiwalker.multiwalker_custom import MultiWalkerEnv as _env_custom
 from .walker.multiwalker.mw_move import MultiWalkerEnv as _env_move
+import sys
 
 logging.basicConfig()
 logging.getLogger().setLevel(logging.WARNING)
@@ -127,8 +128,40 @@ class PettingZooMWEnv(
         """
         return local_obs, global_state, rewards, dones, infos, available_actions
         """
+        # 修改
+        disabled_agent_id = 'walker_0'
+        disabled_id = int(disabled_agent_id.split('_')[-1])
+
+        actions[disabled_id] = np.array([-15.0, -15.0, -15.0, -15.0])
         obs, rew, term, trunc, info = self.env.step(self.wrap(list(actions)))
         obs: ObsWrappedType
+
+        for agent_id in self.agents:
+            current_id_num = int(agent_id.split('_')[-1])
+            # 获取被禁用 agent 的左邻居的 ID
+            left_neighbor_id = f"walker_{disabled_id - 1}"
+            right_neighbor_id = f"walker_{disabled_id + 1}"
+            if current_id_num == disabled_id + 1:
+                # 确保这个左邻居真的存在于环境中
+                if left_neighbor_id in obs:
+                    # 核心步骤：将被禁用 agent 的左邻居观测信息，赋予给当前 agent 的左邻居观测
+                    obs[agent_id][24:26] = obs[left_neighbor_id][24:26]
+                else:
+                    obs[agent_id][24:26] = np.zeros_like(obs[agent_id][24:26])
+            elif current_id_num == disabled_id - 1:
+                    if right_neighbor_id in obs:
+                        obs[agent_id][26:28] = obs[right_neighbor_id][26:28]
+                # 如果被禁用 agent 是最左边的 (walker_0)
+                    else:
+                        obs[agent_id][26:28] = np.zeros_like(obs[agent_id][26:28])
+         
+         # 3. 强制清空被禁用 Agent 自己的所有观测
+            if agent_id == disabled_agent_id:
+                if agent_id in obs:
+                    obs[agent_id][:] = np.zeros_like(obs[agent_id])
+
+
+        # 修改结束
 
         self.cur_step += 1
 
@@ -170,6 +203,14 @@ class PettingZooMWEnv(
         info = cast(TDeepDict, info)
         s_obs: StateType = cast(StateType, self.env.state())
         assert s_obs is not None, "s_obs is None"
+
+        # 手动创建移除agent的信息
+        for agent_id in self.agents:
+            if agent_id not in obs:
+                obs[agent_id] = np.zeros_like(obs[list(obs.keys())[0]])
+                rew[agent_id] = 0.0
+                term[agent_id] = True
+                info[agent_id] = {}
 
         return (
             self.unwrap(obs),

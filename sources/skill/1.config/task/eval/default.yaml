@@ -31,13 +31,8 @@ eval_settings:
     result_file_name: hi
 
     # 是否渲染
-<<<<<<< HEAD
     render: True
-    render_episodes: 2
-=======
-    render: False
     render_episodes: 5
->>>>>>> c4b81c355988f33a5cb68a561d0e4d3deef9b9ba
 
     # 是否进行ablation
     ablation: False
@@ -59,5 +54,5 @@ hydra:
   run:
     dir: ./results/outputs/${now:%Y-%m-%d}/${now:%H-%M-%S}
   sweep:
-    dir: ./results/multirun/${now:%Y-%m-%d}/${now:%H-%M-%S}
+    dir: ./results/multirun/${now:%Y-%m-%d}/${now:%Y-%m-%d}
     subdir: ${hydra.job.num}

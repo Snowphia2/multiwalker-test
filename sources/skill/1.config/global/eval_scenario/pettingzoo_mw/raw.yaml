@@ -5,3 +5,4 @@ desc: 初始场景
 env_tweak:
   terrain_config: [{'type': 'flat', 'length': 35}, {'type': 'up', 'length': 6, 'angle': 13}, {'type': 'flat', 'length': 200}]
   n_walkers: 3
+

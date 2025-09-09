@@ -18,6 +18,7 @@ from moviepy.video.io.VideoFileClip import VideoFileClip
 import imageio
 from typing import cast
 from enum import Enum
+import sys
 
 os.environ["SDL_VIDEODRIVER"] = "dummy"
 
@@ -45,6 +46,7 @@ def _to_harl_dict(
     ) = _train_to_harl_dict(cfg)
 
     rich.print(algo_dict)
+    # sys.exit()
 
     if (
         hasattr(cfg.eval_scenario, "env_tweak")
@@ -204,7 +206,26 @@ def eval(
     rich.pretty.pprint(env_dict, expand_all=True)
 
     # 3. 初始化runner
+    print("初始化runner")
     runner = RUNNER_REGISTRY[algorithm_name](basic_info, algo_dict, env_dict)
+
+    # 修改：
+    try:
+        print("\n--- Listing Environment Object Attributes ---")
+    
+        # 打印 runner.envs 对象的所有属性和方法
+        env_attributes = dir(runner.envs)
+        rich.print(env_attributes)
+
+        print("---------------------------\n")
+                
+      
+    except Exception as e:
+        print(f"Failed to print agents due to an error: {e}")
+    
+    # sys.stdout.flush()
+    # sys.exit()
+    # 修改结束
 
     @atexit.register
     def _cleanup():
@@ -228,7 +249,7 @@ def eval(
             else:
                 (
                     rgb_array,
-                    rewards_arr,
+                    rewards_arr,_,_
                 ) = runner.render(render_mode)
             config_name = f"[{algorithm_name}]<{env_name}>_{scenario_name}{name_suffix}"
             if rgb_array is not None:

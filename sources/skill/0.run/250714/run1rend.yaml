@@ -7,6 +7,7 @@ save_group: handpicked/0714 # 0710/0322
 # save_group: 0711/0109
 steps:
   - type: eval
+    config_name: default
     multirun: False
     args:
       - ++environment.env_tweak.tweak_types=[max_cycles,terminate_reward,reward_factor]
