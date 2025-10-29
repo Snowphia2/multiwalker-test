@@ -9,7 +9,7 @@ save_group: best_mw # 0710/0322 "./results/models/0716/1659"
 # 全局环境配置
 env_tweak:
   terrain_length: 1200  # 增加地形长度以匹配terrain_config
-  terrain_config: [{"type": "flat", "length": 1000}]
+  terrain_config: [{"type": "up", "length": 15, "angle": 3},{"type": "flat", "length": 985}]
 
 steps:
   # - type: eval

@@ -21,6 +21,7 @@ from harl.utils.envs_tools import (
 from harl.utils.models_tools import init_device
 from harl.utils.configs_tools import init_dir, save_config
 from harl.envs import LOGGER_REGISTRY
+import matplotlib.pyplot as plt
 
 
 class OnPolicyBaseRunner:
@@ -694,6 +695,20 @@ class OnPolicyBaseRunner:
                         print(f"total reward of this episode: {rewards}, {steps}")
                         if steps < 500:
                             print(f"{_i} terminate early: {steps}")
+                        env_instance = self.envs.env.unwrapped.env
+                        all_angle_data = env_instance.get_all_angle_history()
+                        if len(all_angle_data) > 0:
+                            plt.figure(figsize=(10, 6))
+                            for i, angle_data in enumerate(all_angle_data):
+                                plt.plot(angle_data, label=f'Episode {i+1}')  
+                            
+                            plt.title("100steps removes agent 2")  
+                            plt.xlabel("Steps")  
+                            plt.ylabel("Pole Angle (radians)")  
+                            plt.legend()
+                            plt.grid(True)
+                            plt.savefig("all_episodes_pole_angle_chart.png")  
+                            plt.close()
                         break
                 render_rgb_array.append(episode_rgb_array)
                 rewards_arr.append(rewards)
@@ -751,6 +766,7 @@ class OnPolicyBaseRunner:
                         time.sleep(0.1)
                     if eval_dones[0][0]:
                         print(f"total reward of this episode: {rewards}, {steps}")
+
                         break
                 render_rgb_array.append(episode_rgb_array)
                 rewards_arr.append(rewards)

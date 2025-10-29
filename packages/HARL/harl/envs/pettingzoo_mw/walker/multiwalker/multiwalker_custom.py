@@ -4,6 +4,7 @@ import math
 import Box2D
 import numpy as np
 import pygame
+import sys
 
 # from Box2D.b2 import (
 #     circleShape,
@@ -75,13 +76,13 @@ class ContactDetector(contactListener):
                     if self.env.package != contact.fixtureA.body:
                         self.env.fallen_walkers[i] = True
 
-        # if package is on the ground
-        if self.env.package == contact.fixtureA.body:
-            if contact.fixtureB.body not in [w.hull for w in self.env.walkers]:
-                self.env.game_over = True
-        if self.env.package == contact.fixtureB.body:
-            if contact.fixtureA.body not in [w.hull for w in self.env.walkers]:
-                self.env.game_over = True
+        # # if package is on the ground
+        # if self.env.package == contact.fixtureA.body:
+        #     if contact.fixtureB.body not in [w.hull for w in self.env.walkers]:
+        #         self.env.game_over = True
+        # if self.env.package == contact.fixtureB.body:
+        #     if contact.fixtureA.body not in [w.hull for w in self.env.walkers]:
+        #         self.env.game_over = True
 
         # self.env.game_over = True
         for walker in self.env.walkers:
@@ -402,9 +403,17 @@ class MultiWalkerEnv:
         self.render_mode = render_mode
         self.frames = 0
         self.rewards_group = np.zeros((self.n_walkers, 4))
+        self.total_package_angle = 0.0
+        self.total_steps = 0
+        self.angel_list = []
+        self.angle_history = []
+        self.all_angle_history = []
 
     def get_param_values(self):
         return self.__dict__
+    
+    def get_all_angle_history(self):
+        return self.all_angle_history
 
     def setup(self):
         self.viewer = None
@@ -479,6 +488,15 @@ class MultiWalkerEnv:
         self.prev_package_shaping = 0.0
         self.scroll = 0.0
         self.lidar_render = 0
+        
+        self.angel_list.append(self.total_package_angle)
+        
+        self.total_package_angle = 0.0
+        self.total_steps = 0
+
+        self.angle_history = []
+        
+
 
         self._generate_package()
         self._generate_terrain(self.hardcore)
@@ -522,8 +540,7 @@ class MultiWalkerEnv:
             x, y = pos.x, pos.y
             xpos[i] = x
 
-            if not self.fallen_walkers[i]:
-                active_xpos.append(x)
+            active_xpos.append(x)
 
             walker_obs = self.walkers[i].get_observation()
             neighbor_obs = []
@@ -563,6 +580,7 @@ class MultiWalkerEnv:
             rewards -= 50 * pkg_angle_delta
             self.rewards_group[:, 2] -= 50 * pkg_angle_delta
         self.previous_pkg_angle = self.package.angle
+        
 
         pkg_angle = self.package.angle
         rewards += -abs(pkg_angle) * 1
@@ -574,6 +592,7 @@ class MultiWalkerEnv:
                 - VIEWPORT_W / SCALE / 5
                 - (self.n_walkers - 1) * WALKER_SEPERATION * TERRAIN_STEP
             )
+        # self.scroll = self.package.position.x - VIEWPORT_W / SCALE / 5
         done = [False] * self.n_walkers
 
         disabled_agent_id = self.disabled_walker_id
@@ -602,33 +621,7 @@ class MultiWalkerEnv:
 
         return rewards, done, obs
 
-    def step(self, action, agent_id, is_last):
-        # 添加检查，如果 agent 被移除，直接返回
-        
-        # disabled_agent_id = 2 
-        # # 如果当前 agent 是我们指定的 disabled agent
-        # if agent_id == disabled_agent_id:
-        #     # 核心逻辑：直接移除它
-        #     if self.walkers[agent_id].hull is not None:
-        #         self.walkers[agent_id]._destroy()
-        #         # 从列表中移除，确保和物理世界同步
-        #         self.walkers.pop(agent_id)
-        #         self.agents.pop(agent_id)
-        #     return  # 移除后，直接返回，不再执行后续代码
-
-        # # 如果当前 agent 是其他 agent
-        # else:
-        #     new_agent_id = agent_id
-        #     if agent_id > disabled_agent_id:
-        #         new_agent_id = agent_id - 1
-        #     # action is array of size 4
-        #     action = action.reshape(4)
-        #     # 尝试访问 walkers 列表
-        #     assert self.walkers[new_agent_id].hull is not None, new_agent_id
-        #     self.walkers[new_agent_id].apply_action(action)
-    
-        
-
+    def step(self, action, agent_id, is_last):      
         # action is array of size 4
         action = action.reshape(4)
         # assert self.walkers[agent_id].hull is not None, agent_id
@@ -645,6 +638,21 @@ class MultiWalkerEnv:
             )
             self.last_dones = done
             self.frames = self.frames + 1
+
+            # 记录 package 的平均角度，用于评估
+            if hasattr(self, 'package') and self.package:
+                current_angle = self.package.angle
+                self.total_package_angle += abs(current_angle)
+                self.angle_history.append(abs(current_angle))
+                print("current_angle: ", abs(current_angle))
+                print("total_package_angle: ", self.total_package_angle)
+                self.total_steps += 1
+                print("total_steps: ", self.total_steps)
+                if self.total_steps == 1000:
+                    self.all_angle_history.append(self.angle_history)
+                    segment_log_path = "/root/2507-multiwalker-harl/angle_log.txt"
+                    with open(segment_log_path, "a", encoding="utf-8") as _f:
+                        _f.write(f"total_steps: {self.total_steps}, total_package_angle: {self.total_package_angle}\n")
 
         if self.render_mode == "human":
             self.render()
@@ -691,6 +699,17 @@ class MultiWalkerEnv:
 
     def render(self, close=False):
         if close:
+            print("-" * 50)
+            print("angel_list: ", self.angel_list)
+            # 因为设置reset了，所以目前输出不了
+            if self.total_steps > 0:
+                average_angle = self.total_package_angle / self.total_steps
+                print("-" * 50)
+                print(f"222回合结束! 杆子平均角度: {average_angle:.4f} 弧度")
+                print(f"总步数: {self.total_steps}")
+                print("-" * 50)
+            else:
+                print("本次运行步数为0，无法计算平均角度。")
             self.close()
             return
 
@@ -1026,6 +1045,8 @@ class MultiWalkerEnv:
 
         # 根据配置生成地形段
         for segment in self.terrain_config:
+            # with open(segment_log_path, "a", encoding="utf-8") as _f:
+            #     _f.write(f"segment: {segment}\n")
             segment_type = segment["type"]
             segment_length = segment["length"]
 
