@@ -1,0 +1,122 @@
+{
+    "algo_args":	{
+        "algo":	{
+            "action_aggregation":	"prod",
+            "actor_num_mini_batch":	1,
+            "clip_param":	0.2,
+            "critic_epoch":	5,
+            "critic_num_mini_batch":	1,
+            "entropy_coef":	0.01,
+            "fixed_order":	true,
+            "gae_lambda":	0.95,
+            "gamma":	0.99,
+            "huber_delta":	10.0,
+            "max_grad_norm":	10.0,
+            "ppo_epoch":	5,
+            "share_param":	true,
+            "use_clipped_value_loss":	true,
+            "use_gae":	true,
+            "use_huber_loss":	true,
+            "use_max_grad_norm":	true,
+            "use_policy_active_masks":	true,
+            "value_loss_coef":	1
+        },
+        "device":	{
+            "cuda":	false,
+            "cuda_deterministic":	false,
+            "torch_threads":	4
+        },
+        "eval":	{
+            "eval_episodes":	20,
+            "n_eval_rollout_threads":	10,
+            "use_eval":	true
+        },
+        "logger":	{
+            "log_dir":	"./results/models/0725/1812"
+        },
+        "model":	{
+            "activation_func":	"relu",
+            "critic_lr":	0.0005,
+            "data_chunk_length":	10,
+            "gain":	0.01,
+            "hidden_sizes":	[
+                128,
+                128
+            ],
+            "initialization_method":	"orthogonal_",
+            "lr":	0.0005,
+            "opti_eps":	1e-05,
+            "recurrent_n":	1,
+            "std_x_coef":	1,
+            "std_y_coef":	0.5,
+            "use_feature_normalization":	true,
+            "use_naive_recurrent_policy":	false,
+            "use_recurrent_policy":	false,
+            "weight_decay":	0
+        },
+        "render":	{
+            "render_episodes":	10,
+            "use_render":	false
+        },
+        "seed":	{
+            "seed":	1,
+            "seed_specify":	true
+        },
+        "train":	{
+            "episode_length":	240,
+            "eval_interval":	10,
+            "log_interval":	5,
+            "model_dir":	null,
+            "n_rollout_threads":	10,
+            "num_env_steps":	20000000,
+            "use_linear_lr_decay":	false,
+            "use_proper_time_limits":	true,
+            "use_valuenorm":	true
+        }
+    },
+    "env_args":	{
+        "action_bias":	0.0,
+        "action_scale":	0.5,
+        "angle_noise":	0.001,
+        "custom":	{
+            "eval_disturb":	[]
+        },
+        "data_path":	"packages/MAPDN/mapdn/environments/var_voltage_control/data/case33_3min_final",
+        "demand_scale":	1.0,
+        "dq_dv_weight":	null,
+        "episode_limit":	240,
+        "fall_reward":	-10.0,
+        "forward_reward":	1.0,
+        "history":	1,
+        "line_weight":	null,
+        "max_cycles":	500,
+        "mode":	"distributed",
+        "n_walkers":	3,
+        "position_noise":	0.001,
+        "pv_scale":	1.0,
+        "q_weight":	0.1,
+        "remove_on_fall":	false,
+        "reset_action":	true,
+        "seed":	42,
+        "shared_reward":	true,
+        "state_space":	[
+            "pv",
+            "demand",
+            "reactive",
+            "vm_pu",
+            "va_degree"
+        ],
+        "terminate_on_fall":	true,
+        "terminate_reward":	-100.0,
+        "terrain_length":	600,
+        "v_lower":	0.95,
+        "v_upper":	1.05,
+        "voltage_barrier_type":	"l1",
+        "voltage_weight":	1.0
+    },
+    "main_args":	{
+        "algo":	"mappo",
+        "env":	"mapdn",
+        "exp_name":	"[mappo]<raw><n_walkers=3>"
+    }
+}

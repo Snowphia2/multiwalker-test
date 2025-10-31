@@ -8,8 +8,8 @@ sed -i '60,62 s/^/        # /' .venv/lib/python3.11/site-packages/pettingzoo/uti
 
 # Install SUMO
 apt update
-apt install software-properties-common -y # <- this step needs an [enter] to proceed
-add-apt-repository ppa:sumo/stable
+apt install software-properties-common -y 
+add-apt-repository ppa:sumo/stable  # <- this step needs an [enter] to proceed
 apt-get update
 apt-get install sumo sumo-tools sumo-doc -y
 echo 'export SUMO_HOME="/usr/share/sumo"' >> ~/.bashrc
