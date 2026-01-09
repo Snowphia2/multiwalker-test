@@ -22,7 +22,9 @@ model:
 eval_settings:
   general:
     seed: 42
+    # eval轮数
     eval_episodes: 100
+    # 并行度
     eval_threads: 50
 
   functions:

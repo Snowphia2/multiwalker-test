@@ -118,6 +118,8 @@ class SumoEnvironment(gym.Env):
         sumo_warnings: bool = True,
         additional_sumo_cmd: Optional[str] = None,
         render_mode: Optional[str] = None,
+
+
     ) -> None:
         """Initialize the environment."""
         assert render_mode is None or render_mode in self.metadata["render_modes"], (
@@ -458,6 +460,7 @@ class SumoEnvironment(gym.Env):
     def _get_system_info(self):
         vehicles = self.sumo.vehicle.getIDList()
         speeds = [self.sumo.vehicle.getSpeed(vehicle) for vehicle in vehicles]
+        # print(f"stopeed_sum:{sum(int(speed < 0.1) for speed in speeds)}")
         waiting_times = [
             self.sumo.vehicle.getWaitingTime(vehicle) for vehicle in vehicles
         ]
@@ -487,6 +490,11 @@ class SumoEnvironment(gym.Env):
         average_speed = [
             self.traffic_signals[ts].get_average_speed() for ts in self.ts_ids
         ]
+        departed = traci.simulation.getDepartedNumber()
+        arrived = traci.simulation.getArrivedNumber()
+        in_system = departed - arrived 
+        # print(f"departed:{departed}")
+        # print(f"arrived:{arrived}")
         info = {}
         for i, ts in enumerate(self.ts_ids):
             info[f"{ts}_stopped"] = stopped[i]

@@ -9,9 +9,10 @@ steps:
     multirun: False
     config_name: mapdn
     args:
-      - algorithm=happo #sac
+      - algorithm=mappo #sac
       - ++environment.env_tweak.tweak_types=[]
-      - eval_scenario=mapdn/mapdn_load_change
+      - eval_scenario=mapdn/raw
+      
 hydra:
   searchpath: 
     - file://sources/skill/0.run

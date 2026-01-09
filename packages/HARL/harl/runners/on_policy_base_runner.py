@@ -22,6 +22,8 @@ from harl.utils.models_tools import init_device
 from harl.utils.configs_tools import init_dir, save_config
 from harl.envs import LOGGER_REGISTRY
 import matplotlib.pyplot as plt
+import os
+from datetime import datetime
 
 
 class OnPolicyBaseRunner:
@@ -696,20 +698,79 @@ class OnPolicyBaseRunner:
                         if steps < 500:
                             print(f"{_i} terminate early: {steps}")
                         env_instance = self.envs.env.unwrapped.env
+                        y_levels = [6.5, 5.0]
+                        W = 30                 # 方差窗口
+                        STABLE_MEAN = 1.0
                         all_angle_data = env_instance.get_all_angle_history()
+                        disturb = env_instance.disturb
+                        disabled_walker_id = env_instance.disabled_walker_id
+                        # results_dir = "/root/2507-multiwalker-harl/z_picture"
                         if len(all_angle_data) > 0:
                             plt.figure(figsize=(10, 6))
+                            color_cycle = plt.rcParams['axes.prop_cycle'].by_key()['color']
+
                             for i, angle_data in enumerate(all_angle_data):
-                                plt.plot(angle_data, label=f'Episode {i+1}')  
-                            
-                            plt.title("100steps removes agent 2")  
-                            plt.xlabel("Steps")  
-                            plt.ylabel("Pole Angle (radians)")  
-                            plt.legend()
+                                x = np.arange(len(angle_data))
+                                y = np.asarray(angle_data, dtype=float)
+                                color = color_cycle[i % len(color_cycle)]
+
+                                # —— 画曲线 ——
+                                plt.plot(x, y, label=f'Ep {i+1}', color=color)
+
+                                # —— 找交点并计算稳态波动方差（SSV） ——
+                                for y_target in y_levels:
+                                    crossings = np.where(np.diff(np.sign(y - y_target)) != 0)[0]
+
+                                    for idx in crossings:
+                                        if idx + 1 >= len(y):
+                                            continue
+
+                                        # 插值
+                                        x_cross = idx + (y_target - y[idx]) / (y[idx+1] - y[idx])
+                                        t = int(round(x_cross))
+
+                                        l = max(0, t - 1)
+                                        r = min(len(y), t + W - 1)
+                                        win = y[l:r]
+
+                                        # —— 稳态波动方差 (SSV)：固定均值 1.5 —— 
+                                        if len(win) >= 2:
+                                            resid = win - STABLE_MEAN
+                                            ssv = float(np.var(resid))
+                                        else:
+                                            ssv = 0.0
+
+                                        if np.isclose(y_target, 5.0):
+                                            print(
+                                                f"[Ep {i+1}] y=5 at x={x_cross:.2f} | "
+                                                f"SSV={ssv:.4f}, stable_mean={STABLE_MEAN}"
+                                            )
+                                        if np.isclose(y_target, 6.5):
+                                            print(
+                                                f"[Ep {i+1}] y=6.5 at x={x_cross:.2f} | "
+                                                f"SSV={ssv:.4f}"
+                                            )
+
+                                        plt.scatter(x_cross, y_target, c="red", s=18)
+
+                            # ---------- 画y=5 和 y=6.5 的横线 ----------
+                            for y_target in y_levels:
+                                plt.axhline(y=y_target, color='gray', linestyle='--', linewidth=1)
+                                plt.text(
+                                    0, y_target + 0.2,
+                                    f"y={y_target}",
+                                    color='black'
+                                )
+                            filename = f"agent_{disabled_walker_id}_for_‘{disturb}’.png"
+                            # filepath = os.path.join(results_dir, filename)
+                            plt.title(f"ok")  
+                            plt.xlabel("Steps") 
+                            plt.ylabel("Pole Angle")  
                             plt.grid(True)
-                            plt.savefig("all_episodes_pole_angle_chart.png")  
+                            plt.savefig(filename, dpi=300, bbox_inches='tight') 
                             plt.close()
-                        break
+
+                        break # 放sys？
                 render_rgb_array.append(episode_rgb_array)
                 rewards_arr.append(rewards)
                 episode_obses_arr.append(episode_obses)

@@ -3,7 +3,7 @@ defaults:
   - _self_
 
 run_group: 250722_llm_env
-save_group: sumo/max_reward # 0710/0322
+save_group: handpicked/sumo/max_reward # 0710/0322
 steps:
   - type: eval
     multirun: False

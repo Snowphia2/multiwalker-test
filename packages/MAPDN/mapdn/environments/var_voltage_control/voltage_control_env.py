@@ -5,6 +5,7 @@ from pandapower import ppException
 import pandas as pd
 import copy
 import os
+import time
 from collections import namedtuple
 from .pf_res_plot import pf_res_plotly
 from .voltage_barrier.voltage_barrier_backend import VoltageBarrier
@@ -115,6 +116,11 @@ class VoltageControl(MultiAgentEnv):
         # codes about pv disturbance
         self.pv_disturbance_active = [False for t in range(self.n_agents)]
 
+        self.flag = True
+
+        self.perturb_targets = 1
+        self.obs_noise_level = 0.05
+
     def reset(self, reset_time=True):
         """reset the env"""
         self.pv_disturbance_active = [False for t in range(self.n_agents)]
@@ -206,6 +212,16 @@ class VoltageControl(MultiAgentEnv):
 
         return self.get_obs(), self.get_state()
 
+    def _apply_action_disturbance(self, actions):
+        actions = np.array(actions, dtype=float)
+
+        if self.steps > 130 and self.steps < 150:
+        # 对指定 agent 加一个偏移
+            agent = 5
+            actions[agent] *= 3
+
+        return actions
+    
     def step(self, actions, add_noise=True):
         """function for the interaction between agent and the env each time step"""
         last_powergrid = copy.deepcopy(self.powergrid)
@@ -248,7 +264,11 @@ class VoltageControl(MultiAgentEnv):
         # actions[pv_id] = 0
 
         # check whether the power balance is unsolvable
+
+        # actions = self._apply_action_disturbance(actions)
         solvable = self._take_action(actions)
+        print(f"steps:{self.steps}")
+        # print(f"actions:{actions}")
         if solvable:
             # get the reward of current actions
             reward, info = self._calc_reward()
@@ -312,12 +332,29 @@ class VoltageControl(MultiAgentEnv):
         state = np.array(state)
         return state
 
+    def disturb_obs(self, x, obs_type: str, agent_id: int):   
+        target_agent = 3
+        if agent_id != target_agent or not (130 < self.steps < 180):
+            return x
+        # 电压：绝对高斯噪声
+        if obs_type == "voltage":
+            bias = 0.1
+            return np.zeros_like(x)
+
+        # 2) 功率/PV：做倍增（对齐 action *= 3 的强度）
+        if obs_type in ("power", "pv"):
+            scale = 5.0
+            return -x
+
+        return x
+    
     def get_obs(self) -> list[np.ndarray]:
         """return the obs for each agent in the power system
         the default obs: voltage, active power of generators, bus state, load active power, load reactive power
         each agent can only observe the state within the zone where it belongs
         """
         clusters = self._get_clusters_info()
+        # print(f"[DEBUG] clusters: {clusters}")
         for i in range(len(self.powergrid.sgen)):
             clusters[f"sgen{i}"][0].loc[clusters[f"sgen{i}"][4]]["p_mw"] += clusters[
                 f"sgen{i}"
@@ -333,6 +370,7 @@ class VoltageControl(MultiAgentEnv):
                     clusters[f"sgen{j}"][0].loc[clusters[f"sgen{i}"][4]]["q_mvar"] += (
                         clusters[f"sgen{i}"][3]
                     )
+        # 是self.args.mode == "distributed"这个选项，对观测做向量化处理
         if self.args.mode == "distributed":
             obs_sgen_dict = dict()
             sgen_list = list()
@@ -348,14 +386,22 @@ class VoltageControl(MultiAgentEnv):
                         demand_q_mvar = copy_zone_buses.loc[:, "q_mvar"].to_numpy(
                             copy=True
                         )
+                        # 添加扰动 p_mw / q_mvar
+                        demand_p_mw = self.disturb_obs(demand_p_mw, "power", i)
+                        demand_q_mvar = self.disturb_obs(demand_q_mvar, "power", i)
                         obs += list(demand_p_mw)
                         obs += list(demand_q_mvar)
                     if "pv" in self.state_space:
+                        # 添加扰动 pv
+                        pv = self.disturb_obs(pv, "pv", i)
                         obs.append(pv)
                     if "reactive" in self.state_space:
                         obs.append(q)
                     if "vm_pu" in self.state_space:
-                        obs += list(zone_buses.loc[:, "vm_pu"].to_numpy(copy=True))
+                        vm_pu = zone_buses.loc[:, "vm_pu"].to_numpy(copy=True)
+                        # 添加扰动 vm_pu
+                        vm_pu = self.disturb_obs(vm_pu, "voltage", i)
+                        obs += list(vm_pu)
                     if "va_degree" in self.state_space:
                         # transform the voltage phase to radian
                         obs += list(
@@ -382,6 +428,7 @@ class VoltageControl(MultiAgentEnv):
                     [obs_sgen, np.zeros(obs_max_len - obs_sgen.shape[0])], axis=0
                 )
                 agents_obs.append(pad_obs_sgen)
+       
         elif self.args.mode == "decentralised":
             obs_len_list = list()
             zone_obs_list = list()
@@ -414,6 +461,8 @@ class VoltageControl(MultiAgentEnv):
                     [obs_zone, np.zeros(obs_max_len - obs_zone.shape[0])], axis=0
                 )
                 agents_obs.append(pad_obs_zone)
+        
+        # self.history一直等于1
         if self.history > 1:
             agents_obs_ = []
             for i, obs in enumerate(agents_obs):
@@ -431,6 +480,7 @@ class VoltageControl(MultiAgentEnv):
                 agents_obs_.append(copy.deepcopy(obs_))
                 self.obs_history[i].append(copy.deepcopy(obs))
             agents_obs = agents_obs_
+            print(f"[DEBUG] agents_obs_TIME: {agents_obs}")  # 打印agents_obs
         return agents_obs
 
     def get_obs_agent(self, agent_id):
@@ -637,7 +687,7 @@ class VoltageControl(MultiAgentEnv):
 
     def _set_reactive_power_boundary(self):
         """set the boundary of reactive power"""
-        self.factor = 1.2
+        self.factor = 5
         self.p_max = self.pv_data.to_numpy(copy=True).max(axis=0)
         self.s_max = self.factor * self.p_max
         print(f"This is the s_max: \n{self.s_max}")
@@ -696,8 +746,6 @@ class VoltageControl(MultiAgentEnv):
         self.powergrid.sgen["q_mvar"] = self._clip_reactive_power(
             actions, self.powergrid.sgen["p_mw"]
         )
-        # print("now actions are: \n", actions)
-        # print(f"q_mvar: {self.powergrid.sgen['q_mvar']}")
         # solve power flow to get the latest voltage with new reactive power and old deamnd and PV active power
         try:
             pp.runpp(self.powergrid)
@@ -719,6 +767,22 @@ class VoltageControl(MultiAgentEnv):
         # print(f"[reactive_power_constraint: \n{reactive_power_constraint}]")
         return reactive_power_constraint * reactive_actions
 
+    def compute_voltage_deviation(self, v, v_stable=1.0):
+        # 每个节点的绝对偏差
+        dev_each = np.abs(v - v_stable)
+
+        # 平均偏差
+        avg_dev = float(np.mean(dev_each))
+
+        # 最大偏差
+        max_dev = float(np.max(dev_each))
+
+        return {
+            "avg_dev": avg_dev,
+            "max_dev": max_dev,
+            "dev_each": dev_each,
+        }
+        
     def _calc_reward(self, info={}):
         """reward function
         consider 5 possible choices on voltage barrier functions:
@@ -733,6 +797,12 @@ class VoltageControl(MultiAgentEnv):
         percent_of_v_out_of_control = (
             np.sum(v < self.v_lower) + np.sum(v > self.v_upper)
         ) / v.shape[0]
+        v_out_of_control = (
+            np.sum(v < self.v_lower) + np.sum(v > self.v_upper)) 
+        print("[DEBUG] vm_pu range:", v.min(), v.max())
+        print("[DEBUG] out_of_control:", v_out_of_control)
+        deviation_info = self.compute_voltage_deviation(v)
+        info["avg_voltage_deviation"] = deviation_info["avg_dev"]
         info["percentage_of_v_out_of_control"] = percent_of_v_out_of_control
         info["percentage_of_lower_than_lower_v"] = np.sum(v < self.v_lower) / v.shape[0]
         info["percentage_of_higher_than_upper_v"] = (
@@ -745,6 +815,7 @@ class VoltageControl(MultiAgentEnv):
         # voltage violation
         v_ref = 0.5 * (self.v_lower + self.v_upper)
         info["average_voltage_deviation"] = np.mean(np.abs(v - v_ref))
+        print(f"This is the average_voltage_deviation: {info['average_voltage_deviation']}")
         info["average_voltage"] = np.mean(v)
         info["max_voltage_drop_deviation"] = np.max(
             (v < self.v_lower) * (self.v_lower - v)

@@ -27,6 +27,8 @@ from gymnasium.utils import seeding
 from pettingzoo.sisl._utils import Agent
 from pygame import gfxdraw
 
+from collections import defaultdict
+
 MAX_AGENTS = 40
 
 FPS = 50
@@ -358,6 +360,7 @@ class MultiWalkerEnv:
         render_mode=None,
         terrain_config=None,
         disabled_walker_id=-1,
+        disturb=1,
     ):
         """Initializes the `MultiWalkerEnv` class.
 
@@ -392,6 +395,7 @@ class MultiWalkerEnv:
         self.terrain_length = terrain_length
         self.terrain_config = terrain_config
         self.disabled_walker_id = disabled_walker_id
+        self.disturb = disturb
         self.seed_val = None
         self._seed()
         self.setup()
@@ -408,12 +412,21 @@ class MultiWalkerEnv:
         self.angel_list = []
         self.angle_history = []
         self.all_angle_history = []
+        
+        self.obs_get = defaultdict(list)
+        self.all_obs = []
+
+        self.all_rewards = []
+        self.all_rewards_history = []
 
     def get_param_values(self):
         return self.__dict__
     
     def get_all_angle_history(self):
         return self.all_angle_history
+
+    def get_all_rewards_history(self):
+        return self.all_rewards_history
 
     def setup(self):
         self.viewer = None
@@ -495,7 +508,7 @@ class MultiWalkerEnv:
         self.total_steps = 0
 
         self.angle_history = []
-        
+        self.obs_get = defaultdict(list)
 
 
         self._generate_package()
@@ -543,6 +556,11 @@ class MultiWalkerEnv:
             active_xpos.append(x)
 
             walker_obs = self.walkers[i].get_observation()
+            
+            # 假设躯干角度是 walker_obs 的第一个元素
+            torso_angle = walker_obs[0]
+            self.obs_get[i].append(torso_angle)
+
             neighbor_obs = []
             for j in [i - 1, i + 1]:
                 # if no neighbor (for edge walkers)
@@ -626,6 +644,7 @@ class MultiWalkerEnv:
         action = action.reshape(4)
         # assert self.walkers[agent_id].hull is not None, agent_id
         self.walkers[agent_id].apply_action(action)
+
         if is_last:
             self.world.Step(1.0 / FPS, 6 * 30, 2 * 30)
             rewards, done, mod_obs = self.scroll_subroutine()
@@ -641,18 +660,21 @@ class MultiWalkerEnv:
 
             # 记录 package 的平均角度，用于评估
             if hasattr(self, 'package') and self.package:
-                current_angle = self.package.angle
+                current_angle = self.package.angle / 3.14 * 180
                 self.total_package_angle += abs(current_angle)
                 self.angle_history.append(abs(current_angle))
-                print("current_angle: ", abs(current_angle))
-                print("total_package_angle: ", self.total_package_angle)
+                self.all_rewards.append(self.last_rewards[0])
+                # print("current_angle: ", abs(current_angle))
+                # print("total_package_angle: ", self.total_package_angle)
+                # print("self.last_rewards: ", self.last_rewards[0])
                 self.total_steps += 1
-                print("total_steps: ", self.total_steps)
-                if self.total_steps == 1000:
+                # print("total_steps: ", self.total_steps)
+                if self.total_steps == 2000:
                     self.all_angle_history.append(self.angle_history)
+                    self.all_rewards_history.append(self.all_rewards)
                     segment_log_path = "/root/2507-multiwalker-harl/angle_log.txt"
                     with open(segment_log_path, "a", encoding="utf-8") as _f:
-                        _f.write(f"total_steps: {self.total_steps}, total_package_angle: {self.total_package_angle}\n")
+                        _f.write(f"toßtal_steps: {self.total_steps}, total_package_angle: {self.total_package_angle}\n")
 
         if self.render_mode == "human":
             self.render()

@@ -6,6 +6,9 @@ def get_default_test_data():
     return {
         "system_total_waiting_time": [],
         "tw_bigger_than_1000": [],
+        "system_total_stopped": [],
+        "system_step": [],
+        
     }
 
 
@@ -41,7 +44,16 @@ class PettingZooSumoLogger(BaseLogger):
             eval_infos,
             eval_available_actions,
         ) = eval_data
+        mean_value = sum(thread[0]["system_total_stopped"] for thread in eval_infos if thread) / len(eval_infos)
+        a = [thread[0]["system_total_stopped"] for thread in eval_infos if thread]
+        print(a)
+        self.test_data["system_total_stopped"].append(mean_value)
+        curr_step = [thread[0]["curr_step"] for thread in eval_infos if thread][0]
+        
+        # print(f"curr_step:{curr_step}")
+        self.test_data['system_step'].append(curr_step)
         for i in range(len(eval_infos)):
+            # print(f"len(eval_infos):{len(eval_infos)}")
             if eval_dones[i][0]:
                 self.test_data["system_total_waiting_time"].append(
                     eval_infos[i][0]["system_total_waiting_time"]
@@ -50,6 +62,7 @@ class PettingZooSumoLogger(BaseLogger):
                 self.test_data["tw_bigger_than_1000"].append(
                     eval_infos[i][0]["system_total_waiting_time"]
                 )
+
 
     def eval_log(self, eval_episode):
         """Log evaluation information."""

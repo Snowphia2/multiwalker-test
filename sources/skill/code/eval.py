@@ -34,6 +34,7 @@ class Env(Enum):
 def _to_harl_dict(
     cfg: EvalConfig,
 ):
+    
     (
         algo_dict,
         env_dict,
@@ -60,6 +61,7 @@ def _to_harl_dict(
 
     if hasattr(cfg.eval_scenario, "events") and cfg.eval_scenario.events is not None:
         env_dict["events"] = _to_dict(cfg.eval_scenario)["events"]
+
 
     return (
         algo_dict,
@@ -202,12 +204,13 @@ def eval(
 
     _modify_algo_and_env_dict()
 
-    rich.pretty.pprint(algo_dict, expand_all=True)
-    rich.pretty.pprint(env_dict, expand_all=True)
+    # rich.pretty.pprint(algo_dict, expand_all=True)
+    # rich.pretty.pprint(env_dict, expand_all=True)
 
     # 3. 初始化runner
     print("初始化runner")
     runner = RUNNER_REGISTRY[algorithm_name](basic_info, algo_dict, env_dict)
+    print("there!!!!!!!!!!!!!!!!!!!!!!!")
 
     # 修改：
     try:
@@ -235,6 +238,7 @@ def eval(
     is_online_policy = hasattr(runner, "logger")
     start_time = time.time()
     # 4. render？还是eval？
+    print("参数拿到了")
     if config.eval_settings.functions.render:
 
         def _render():
@@ -303,6 +307,7 @@ def eval(
         # 根据是否是off-policy，选择不同的eval方式
         angle_arr = []
         if is_online_policy:
+            print("it is onpolicy")
             runner = cast(OnPolicyMARunner, runner)
             logger: PettingZooMWLogger = runner.logger
             logger.is_testing = (
@@ -314,7 +319,9 @@ def eval(
             terminate_arr = logger.test_data.get("terminate_at", [])
             if this_env_is_mw_series:
                 angle_arr = logger.test_data.get("angle_data", [])
+
         else:
+            print("it is offpolicy")
             runner = cast(OffPolicyBaseRunner, runner)
             logger = None
             runner.eval(1)
@@ -358,7 +365,7 @@ def eval(
                 "variant": scenario_name,
                 "scenario": config.eval_scenario.name,
                 "terminate_cnt": terminate_cnt,
-                "avg_terminate_at": sum(early_terminate_arr) / len(early_terminate_arr),
+                "avg_terminate_at": sum(early_terminate_arr) / len(early_terminate_arr) if early_terminate_arr else 0,
                 "total_episodes": len(terminate_arr),
                 "total_time": end_time - start_time,
                 "total_timesteps": sum(terminate_arr)
@@ -389,6 +396,30 @@ def eval(
                     [1 for angle in angle_flatten if angle > 15]
                 ) / len(angle_flatten)
                 return_result["package_x"] = sum(package_x) / len(package_x)
+
+                results_dir = "/root/2507-multiwalker-harl/z_picture"
+                disabled_agent_id = config.environment.env_tweak.disabled_walker_id  
+                disturb = config.environment.env_tweak.disturb  
+                filename = f"agent_{disabled_agent_id}_disturb_‘{disturb}’.txt"
+                filepath = os.path.join(results_dir, filename)
+                if len(angle_flatten) > 0:
+                    # 计算大于6.5的数据比例
+                    threshold = 6.5
+                    count_above_threshold = sum(1 for angle in angle_flatten if angle > threshold)
+                    percentage_above = (count_above_threshold / len(angle_flatten)) * 100
+                    
+                    # 检查是否超过10%
+                    # if percentage_above > 10:
+                    # 输出文件
+                    with open(filepath, 'w') as f:
+                        f.write(f"数据统计报告\n")
+                        f.write(f"==============\n")
+                        f.write(f"总数据点: {len(angle_flatten)}\n")
+                        f.write(f"阈值: {threshold}\n")
+                        f.write(f"超过阈值的数据点: {count_above_threshold}\n")
+                        f.write(f"比例: {percentage_above:.2f}%\n\n")
+                        f.write("超过阈值的数据详情:\n")
+
         elif this_env == Env.MAPDN:
             return_result = {
                 "desc": f"[{algorithm_name}]<{scenario_name}>_{config.eval_scenario.name}_{_to_dict(config.eval_scenario).get('desc', 'original')}",
@@ -396,7 +427,7 @@ def eval(
                 "variant": scenario_name,
                 "scenario": config.eval_scenario.name,
                 "terminate_cnt": terminate_cnt,
-                "avg_terminate_at": sum(early_terminate_arr) / len(early_terminate_arr),
+                "avg_terminate_at": sum(early_terminate_arr) / len(early_terminate_arr) if early_terminate_arr else 0,
                 "total_episodes": len(terminate_arr),
             }
             if is_online_policy:
@@ -436,7 +467,16 @@ def eval(
                 return_result["sum_rewards"] = sum(
                     logger.test_data["sum_rewards"]
                 ) / len(logger.test_data["sum_rewards"])
+
+
         elif this_env == Env.SUMO or this_env == Env.SUMO_LLM:
+            stopped_step_pairs = [
+                {"step": step, "stopped": stopped} 
+                for i, (step, stopped) in enumerate(zip(
+                    logger.test_data["system_step"], 
+                    logger.test_data["system_total_stopped"]
+                ))
+            ]
             return_result = {
                 "desc": f"[{algorithm_name}]<{scenario_name}>_{config.eval_scenario.name}_{_to_dict(config.eval_scenario).get('desc', 'original')}",
                 "algo": algorithm_name,
@@ -449,6 +489,8 @@ def eval(
                     logger.test_data["system_total_waiting_time"]
                 )
                 / (len(logger.test_data["system_total_waiting_time"]) + 1),
+                "system_total_stopped":stopped_step_pairs,
+                # "system_step":logger.test_data["system_step"],
                 "tw_bigger_than_1000_max": max(
                     logger.test_data["system_total_waiting_time"]
                 ),
@@ -476,7 +518,7 @@ def eval(
     config_path="../1.config/task/eval", config_name="default", version_base=None
 )
 def main(cfg: EvalConfig):
-    rich.pretty.pprint(_to_dict(cfg), expand_all=True)
+    # rich.pretty.pprint(_to_dict(cfg), expand_all=True)
 
     # 2. 整理参数，转换为dict以传导给harl
     (
@@ -504,7 +546,26 @@ def main(cfg: EvalConfig):
             scenario_name,
         ],
     )
+
+    import numpy as np
+
+    def convert_np(obj):
+        """
+        递归地将dict/list中的numpy类型转换为Python原生类型
+        """
+        if isinstance(obj, dict):
+            return {k: convert_np(v) for k, v in obj.items()}
+        elif isinstance(obj, list):
+            return [convert_np(v) for v in obj]
+        elif isinstance(obj, np.generic):
+            return obj.item()
+        else:
+            return obj
+
+    # time.sleep(10000)
+
     # 5. 启动训练
+    print("start!!!!!!!!!!!!!!!!!!!!!!!!")
     result = eval(cfg)
     # 保存结果到JSON文件
     """
@@ -528,27 +589,30 @@ def main(cfg: EvalConfig):
         """
         处理result中的numpy类型（如np.int32），将其转换为Python原生类型，确保可以被json序列化
         """
-        import numpy as np
-
-        def convert_np(obj):
-            """
-            递归地将dict/list中的numpy类型转换为Python原生类型
-            """
-            if isinstance(obj, dict):
-                return {k: convert_np(v) for k, v in obj.items()}
-            elif isinstance(obj, list):
-                return [convert_np(v) for v in obj]
-            elif isinstance(obj, np.generic):
-                return obj.item()
-            else:
-                return obj
+        
 
         result = convert_np(result)
-        json_path = os.path.join(
-            save_dir, f"{env_name}_{algorithm_name}_{scenario_name}.json"
-        )
-        with open(json_path, "w", encoding="utf-8") as f:
-            json.dump(result, f, ensure_ascii=False, indent=2)
+        
+        # 获取 perturb_targets 用于文件名
+        if hasattr(cfg.environment.env_tweak, 'perturb_targets'):
+            perturb_targets = cfg.environment.env_tweak.perturb_targets
+            if perturb_targets and len(perturb_targets) > 0:
+                place_suffix = "_".join(perturb_targets)
+            else:
+                place_suffix = "no_perturb"
+
+            json_path = os.path.join(
+                save_dir, f"{env_name}_{algorithm_name}_{scenario_name}_{place_suffix}.json"
+            )
+            with open(json_path, "w", encoding="utf-8") as f:
+                json.dump(result, f, ensure_ascii=False, indent=2)
+        
+        else:
+            json_path = os.path.join(
+                save_dir, f"{env_name}_{algorithm_name}_{scenario_name}.json"
+            )
+            with open(json_path, "w", encoding="utf-8") as f:
+                json.dump(result, f, ensure_ascii=False, indent=2)
 
         print(f"Results saved to: {json_path}")
 

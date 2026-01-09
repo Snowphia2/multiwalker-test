@@ -7,8 +7,8 @@ history: 1
 pv_scale: 1.0
 demand_scale: 1.0
 state_space: ["pv", "demand", "reactive", "vm_pu", "va_degree"]
-v_upper: 1.05
-v_lower: 0.95
+v_upper: 1.03
+v_lower: 0.97
 episode_limit: 240 # in time intervals
 action_scale: !!null
 action_bias: !!null

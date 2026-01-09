@@ -162,7 +162,10 @@ class MapdnWrapperEnv(EnvProtocol):
         obs = self._type_safe_get_obs()
         return obs, reward, terminated, info
 
+    
+
     def step(self, actions: ActionType):
+
         obs, reward, terminated, info = self._type_safe_env_step(actions)  # type: ignore
 
         return (
@@ -172,6 +175,7 @@ class MapdnWrapperEnv(EnvProtocol):
             self.wrap(self.repeat(terminated)),
             self.wrap(self.repeat(info)),
         )
+
 
     def reset(self, seed: Union[int, None] = None):
         obs, global_state = self.real_env.reset()

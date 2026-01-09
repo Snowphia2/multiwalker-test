@@ -2,8 +2,9 @@ defaults:
   - default
   - _self_
 
+
 run_group: 250722_llm_env
-save_group: sumo/max_reward # 0710/0322
+save_group: handpicked/sumo/max_reward # 0710/0322
 steps:
   - type: eval
     multirun: False
@@ -11,7 +12,10 @@ steps:
     args:
       - algorithm=mappo
       - ++environment.env_tweak.tweak_types=[]
-      - eval_scenario=sumo/lane_closed
+      - ++environment.env_tweak.action_perturb_prob=1
+      # - "++environment.env_tweak.perturb_targets=${perturb_targets}"
+      - eval_scenario=sumo/raw
+
 hydra:
   searchpath: 
     - file://sources/skill/0.run

@@ -1,5 +1,6 @@
 import copy
 import logging
+import time
 
 from dataclasses import asdict, dataclass, field
 from typing import Any, Optional, Union
@@ -10,6 +11,7 @@ from sumo_rl.environment.env import SumoEnvironment
 from pettingzoo.utils.conversions import aec_to_parallel_wrapper
 import sumo_rl
 import numpy as np
+import random
 
 import gymnasium as gym
 
@@ -97,6 +99,9 @@ class SumoEnvConfig:
     sumo_warnings: bool = True
     additional_sumo_cmd: Optional[str] = None
     render_mode: Optional[str] = None
+    
+    action_perturb_prob: float = 1
+    perturb_targets: list[str] = field(default_factory=list)
 
     events: Optional[list[Event]] = None
 
@@ -149,6 +154,18 @@ class PettingZooSumoEnv(
         dict_args["virtual_display"] = tuple(dict_args["virtual_display"])
         del dict_args["observation_class"]
         del dict_args["events"]
+
+        self.action_perturb_prob = getattr(args, "action_perturb_prob", 1)
+        targets = getattr(args, "perturb_targets", [''])
+        if targets is None:
+            self.perturb_targets = None
+        else:
+            # 统一转成集合，字符串列表最方便：["C3","B2"]
+            self.perturb_targets = set(targets)
+        self._rng = np.random.RandomState(getattr(args, "seed", 0))
+        dict_args.pop("action_perturb_prob", None)
+        dict_args.pop("perturb_targets", None)
+
         self.env = parallel_env(**dict_args, observation_class=args.observation_class)
         self.env.reset()
 
@@ -161,6 +178,7 @@ class PettingZooSumoEnv(
         self.share_observation_space = self.repeat(self.env.state_space)
         self._seed = 0
         self.cur_step = 0
+
 
         # events
         if args.events is not None:
@@ -187,17 +205,71 @@ class PettingZooSumoEnv(
     def global_state(self) -> StateType:
         return self.env.state()
 
+    def action_disturb(self, actions):
+        if self.action_perturb_prob <= 0.0 or not self.perturb_targets:
+            return actions
+        
+        for tl_id, old_a in actions.items():
+            if tl_id in self.perturb_targets :
+                print(f"perturb_targets:{self.perturb_targets}")
+                candidates = [0, 1, 2, 3]
+                new_a = random.choice(candidates)
+                actions[tl_id] = new_a
+        return actions
+
+    def obs_disturb(self, obs):
+        # 对观测加入扰动：
+        # - 不动 phase_one_hot (0:4) 和 min_green (4)
+        # - 对 lane density + lane queue 部分 (5:) 加高斯噪声，并裁剪到 [0, 1]
+        # `obs` 是一个 dict: {agent_id: np.ndarray(shape=(29,))}
+        disturbed_obs = {}
+
+        for agent, o in obs.items():
+            # 转成 float32 副本，避免就地改 env 内部缓存
+            arr = np.asarray(o, dtype=np.float32).copy()
+
+            # 如果这个 agent 不在扰动列表，则原样返回
+            if agent not in self.perturb_targets:
+                disturbed_obs[agent] = arr
+                continue
+            
+            # 防御：长度不对就直接跳过（原样返回）
+            if arr.shape[0] < 6:
+                disturbed_obs[agent] = arr
+                continue
+
+            # 只扰动 index >= 5 的部分（density + queue）
+            # noise_dim = arr.shape[0] - 5
+            # noise = np.random.normal(
+            #     loc=0.0,
+            #     scale=0.1,
+            #     size=noise_dim,
+            # ).astype(np.float32)
+
+            # arr[5:] = arr[5:] + noise
+            # density / queue 都是归一化值，保持在 [0,1]
+            arr[5:] = arr[5:] * 8.0
+            arr[5:] = np.clip(arr[5:], 0.0, 1.0)
+
+            disturbed_obs[agent] = arr
+
+        return disturbed_obs
+
     def step(self, actions):
         """
         return local_obs, global_state, rewards, dones, infos, available_actions
         """
         actions_wrapped = self.wrap(actions.flatten().tolist())
+        # 动作扰动
+        # if self.cur_step > 100 and self.cur_step <200:
+        #     actions_wrapped = self.action_disturb(actions_wrapped)
 
         # 可以在这里延长绿灯时间；设个参数，atleast>33s; 小于33的时候不许关绿色信号。
         obs, rew, term, trunc, info = self.env.step(actions_wrapped)  # type: ignore
         # 这里的析构是aec_to_parallel_wrapper负责的
 
         self.cur_step += 1
+        info["step"] = self.cur_step
         if self.cur_step == self.max_cycles:
             trunc = {agent: True for agent in self.agents}
             for agent in self.agents:
@@ -210,6 +282,9 @@ class PettingZooSumoEnv(
         total_reward: float = sum([rew[agent] for agent in self.agents])
         rewards: list[list[float]] = [[total_reward]] * self.n_agents
 
+        # 观测扰动
+        if self.cur_step > 100 and self.cur_step <200:
+            obs = self.obs_disturb(obs)
         self.trigger_event()
         return (
             self.unwrap(obs),
