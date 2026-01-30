@@ -16,6 +16,14 @@ class PettingZooMWLogger(BaseLogger):
             ],
             "package_x": [],
             "v_deviation": [],
+            # 新增扰动指标
+            "mttf_data": [],
+            "recovery_time_data": [],
+            "max_angle_data": [],
+            "disturbance_config": {
+                "target_agent": None,
+                "magnitude": None
+            }
         }
 
     def init(self, episodes):
@@ -28,6 +36,14 @@ class PettingZooMWLogger(BaseLogger):
             ],
             "package_x": [],
             "v_deviation": [],
+            # 新增扰动指标
+            "mttf_data": [],
+            "recovery_time_data": [],
+            "max_angle_data": [],
+            "disturbance_config": {
+                "target_agent": None,
+                "magnitude": None
+            }
         }
 
     def get_task_name(self):
@@ -42,6 +58,14 @@ class PettingZooMWLogger(BaseLogger):
             ],
             "package_x": [],
             "v_deviation": [],
+            # 新增扰动指标
+            "mttf_data": [],
+            "recovery_time_data": [],
+            "max_angle_data": [],
+            "disturbance_config": {
+                "target_agent": None,
+                "magnitude": None
+            }
         }
 
     def eval_per_step(self, eval_data):
@@ -68,6 +92,15 @@ class PettingZooMWLogger(BaseLogger):
                     self.test_data["v_deviation"].append(
                         eval_infos[i][0].get("v_deviation", 0)
                     )
+                    # 新增扰动指标收集
+                    if 'disturbance_mttf' in eval_infos[i][0]:
+                        self.test_data["mttf_data"].append(eval_infos[i][0]["disturbance_mttf"])
+                        self.test_data["recovery_time_data"].append(
+                            eval_infos[i][0]["disturbance_recovery_time"]
+                        )
+                        self.test_data["max_angle_data"].append(
+                            eval_infos[i][0]["disturbance_max_angle"]
+                    )
             for eval_i in range(self.algo_args["eval"]["n_eval_rollout_threads"]):
                 self.one_episode_rewards[eval_i].append(eval_rewards[eval_i])
             self.eval_infos = eval_infos
@@ -85,6 +118,20 @@ class PettingZooMWLogger(BaseLogger):
             # "eval_v_deviation": self.test_data["v_deviation"],
             "eval_average_v_deviation": [np.mean(self.test_data["v_deviation"])],
         }
+        
+        # 新增扰动指标统计
+        if self.test_data["mttf_data"]:
+            mttf_values = [x for x in self.test_data["mttf_data"] if x is not None]
+            if mttf_values:
+                eval_env_infos["eval_avg_mttf"] = [np.mean(mttf_values)]
+        
+        if self.test_data["recovery_time_data"]:
+            recovery_values = [x for x in self.test_data["recovery_time_data"] if x is not None]
+            if recovery_values:
+                eval_env_infos["eval_avg_recovery_time"] = [np.mean(recovery_values)]
+        
+        if self.test_data["max_angle_data"]:
+            eval_env_infos["eval_max_angle"] = [np.max(self.test_data["max_angle_data"])]
         # print(eval_env_infos)
         self.log_env(eval_env_infos)
         eval_avg_rew = np.mean(self.eval_episode_rewards)

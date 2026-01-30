@@ -21,7 +21,7 @@ for t in "${TARGETS[@]}"; do
     --config-name=sumo
     algorithm=mappo
     "++environment.env_tweak.tweak_types=[]"
-    ++environment.env_tweak.action_perturb_prob=1
+    ++environment.env_tweak.action_perturb_prob=0.2
     eval_scenario=sumo/raw
     wandb.wandb_group=250722_llm_env
     model.save_group=handpicked/sumo/max_reward

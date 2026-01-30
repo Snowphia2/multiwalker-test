@@ -208,13 +208,15 @@ class PettingZooSumoEnv(
     def action_disturb(self, actions):
         if self.action_perturb_prob <= 0.0 or not self.perturb_targets:
             return actions
-        
+
         for tl_id, old_a in actions.items():
-            if tl_id in self.perturb_targets :
-                print(f"perturb_targets:{self.perturb_targets}")
-                candidates = [0, 1, 2, 3]
-                new_a = random.choice(candidates)
-                actions[tl_id] = new_a
+            if tl_id in self.perturb_targets:
+                # 以 action_perturb_prob 的概率进行扰动
+                if random.random() < self.action_perturb_prob:
+                    # print(f"action_perturb_prob:{self.action_perturb_prob}")
+                    candidates = [0, 1, 2, 3]
+                    new_a = random.choice(candidates)
+                    actions[tl_id] = new_a
         return actions
 
     def obs_disturb(self, obs):
@@ -261,8 +263,8 @@ class PettingZooSumoEnv(
         """
         actions_wrapped = self.wrap(actions.flatten().tolist())
         # 动作扰动
-        # if self.cur_step > 100 and self.cur_step <200:
-        #     actions_wrapped = self.action_disturb(actions_wrapped)
+        if self.cur_step > 100 and self.cur_step <200:
+            actions_wrapped = self.action_disturb(actions_wrapped)
 
         # 可以在这里延长绿灯时间；设个参数，atleast>33s; 小于33的时候不许关绿色信号。
         obs, rew, term, trunc, info = self.env.step(actions_wrapped)  # type: ignore
@@ -282,9 +284,9 @@ class PettingZooSumoEnv(
         total_reward: float = sum([rew[agent] for agent in self.agents])
         rewards: list[list[float]] = [[total_reward]] * self.n_agents
 
-        # 观测扰动
-        if self.cur_step > 100 and self.cur_step <200:
-            obs = self.obs_disturb(obs)
+        # # 观测扰动
+        # if self.cur_step > 100 and self.cur_step <200:
+        #     obs = self.obs_disturb(obs)
         self.trigger_event()
         return (
             self.unwrap(obs),

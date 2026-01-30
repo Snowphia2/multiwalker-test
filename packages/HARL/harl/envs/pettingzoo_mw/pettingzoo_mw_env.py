@@ -93,8 +93,32 @@ class PettingZooMWEnv(
         self.cur_step = 0
         self.disabled_walker_id = self.args.get('disabled_walker_id', -1)
         self.disturb = self.args.get('disturb')
+        
+        # 扰动实验配置 - 提取并从args中移除，避免传递给底层环境
+        self.disturbance_mode = self.args.get('disturbance_mode', None)
+        self.disturb_target_agent = self.args.get('disturb_target_agent', -1)
+        self.disturb_magnitude = self.args.get('disturb_magnitude', 0.0)
+        self.disturb_start_step = self.args.get('disturb_start_step', 100)
+        self.failure_threshold = 6.5  # 失效角度阈值（度）
+        self.recovery_threshold = 5.0  # 恢复角度阈值（度）
+        self.failure_consecutive_steps = 10  # 连续多少步超过阈值算失效
+
+        # 追踪变量
+        self.disturbance_active = False
+        self.disturbance_injected_step = None
+        self.failure_detected_step = None
+        self.disturbance_cancelled_step = None
+        self.recovery_detected_step = None
+        self.angle_history = []
+        self.max_angle_in_episode = 0.0
+        
+        # 创建过滤后的args，移除扰动参数避免传给底层环境
+        filtered_args = {k: v for k, v in self.args.items() 
+                        if k not in ['disturbance_mode', 'disturb_target_agent', 
+                                    'disturb_magnitude', 'disturb_start_step']}
+        
         # self.module = multiwalker_v9
-        self.base_env, self.raw_env = env_with_raw(**self.args)
+        self.base_env, self.raw_env = env_with_raw(**filtered_args)
         self.multiwalker_env = self.raw_env.env
         self.env = cast(
             aec_to_parallel_wrapper[str, ObsType, ActionType],
@@ -152,6 +176,36 @@ class PettingZooMWEnv(
                     if agent_id in obs:
                         obs[agent_id][:] = np.zeros_like(obs[agent_id])
 
+    def _check_failure_condition(self, current_angle: float) -> bool:
+        """检查是否满足失效条件：连续10步角度超过6.5度"""
+        self.angle_history.append(abs(current_angle))
+        if len(self.angle_history) > self.failure_consecutive_steps:
+            self.angle_history.pop(0)
+        
+        if len(self.angle_history) == self.failure_consecutive_steps:
+            return all(angle > self.failure_threshold for angle in self.angle_history)
+        return False
+
+    def _check_recovery_condition(self, current_angle: float) -> bool:
+        """检查是否已恢复：角度小于5度"""
+        return abs(current_angle) < self.recovery_threshold
+
+    def _calculate_metrics(self) -> dict:
+        """计算三个关键指标"""
+        metrics = {
+            'mttf': None,  # 平均失效时间
+            'recovery_time': None,  # 恢复速度
+            'max_angle': self.max_angle_in_episode  # 最大角度
+        }
+        
+        if self.disturbance_injected_step is not None and self.failure_detected_step is not None:
+            metrics['mttf'] = self.failure_detected_step - self.disturbance_injected_step
+        
+        if self.disturbance_cancelled_step is not None and self.recovery_detected_step is not None:
+            metrics['recovery_time'] = self.recovery_detected_step - self.disturbance_cancelled_step
+        
+        return metrics
+
     @override
     def step(
         self, actions: ActionType
@@ -166,8 +220,20 @@ class PettingZooMWEnv(
         """
         return local_obs, global_state, rewards, dones, infos, available_actions
         """
+        # 新的自适应扰动逻辑
+        if self.disturbance_mode == 'adaptive':
+            # 1. 在指定步数注入扰动
+            if (self.disturb_target_agent >= 0 and 
+                self.cur_step == self.disturb_start_step):
+                self.disturbance_active = True
+                self.disturbance_injected_step = self.cur_step
+            
+            # 2. 如果扰动激活，修改动作（所有4个维度）
+            if self.disturbance_active and self.disturb_target_agent >= 0:
+                actions[self.disturb_target_agent] = actions[self.disturb_target_agent] + self.disturb_magnitude
+        
         # 修改某一维观测值，num是某一维
-        if self.disabled_walker_id > -1 and self.cur_step >= 100 and self.cur_step <= 1500:
+        if self.disabled_walker_id != -1 and self.cur_step >= 100 and self.cur_step <= 1500:
             num = 30
             disabled_agent_id = f'walker_{self.disabled_walker_id}'
             obs, rew, term, trunc, info = self.env.step(self.wrap(list(actions)))
@@ -197,6 +263,29 @@ class PettingZooMWEnv(
             obs: ObsWrappedType
 
 
+        # 自适应扰动：监测失效和恢复
+        if self.disturbance_mode == 'adaptive':
+            # 获取当前角度
+            assert self.multiwalker_env.package is not None
+            current_angle_rad = self.multiwalker_env.package.angle
+            current_angle_deg = abs(current_angle_rad) / 3.14 * 180
+            
+            # 更新最大角度
+            self.max_angle_in_episode = max(self.max_angle_in_episode, current_angle_deg)
+            
+            # 监测失效并自动取消扰动
+            if self.disturbance_active and self._check_failure_condition(current_angle_deg):
+                if self.failure_detected_step is None:
+                    self.failure_detected_step = self.cur_step
+                    self.disturbance_active = False
+                    self.disturbance_cancelled_step = self.cur_step
+            
+            # 监测恢复
+            if (self.disturbance_cancelled_step is not None and 
+                self.recovery_detected_step is None and
+                self._check_recovery_condition(current_angle_deg)):
+                self.recovery_detected_step = self.cur_step
+
         self.cur_step += 1
 
         for agent in self.agents:
@@ -206,6 +295,19 @@ class PettingZooMWEnv(
             )
             info[agent]["curr_step"] = self.cur_step
             info[agent]["package_x"] = self.multiwalker_env.package.position.x
+            # 添加package接触地面标志
+            info[agent]["package_touched_ground"] = getattr(self.multiwalker_env, 'package_touched_ground', False)
+            
+            # 添加扰动指标到info
+            if self.disturbance_mode == 'adaptive':
+                metrics = self._calculate_metrics()
+                info[agent].update({
+                    'disturbance_mttf': metrics['mttf'],
+                    'disturbance_recovery_time': metrics['recovery_time'],
+                    'disturbance_max_angle': metrics['max_angle'],
+                    'disturbance_active': self.disturbance_active,
+                    'current_angle_deg': abs(self.multiwalker_env.package.angle) / 3.14 * 180
+                })
 
             if isinstance(self.multiwalker_env, _env_move):
                 assert self.multiwalker_env.target_v is not None
@@ -287,6 +389,16 @@ class PettingZooMWEnv(
         obs = self.unwrap(obs)
         s_obs = self.repeat(self.env.state())
         self.sigh = True
+        
+        # 重置扰动追踪变量
+        self.disturbance_active = False
+        self.disturbance_injected_step = None
+        self.failure_detected_step = None
+        self.disturbance_cancelled_step = None
+        self.recovery_detected_step = None
+        self.angle_history = []
+        self.max_angle_in_episode = 0.0
+        
         return obs, s_obs, self.get_avail_actions()
 
     @override

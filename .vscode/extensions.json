@@ -10,6 +10,7 @@
         "aaron-bond.better-comments",
         "mikestead.dotenv",
         "wayou.vscode-todo-highlight",
-        "gruntfuggly.todo-tree"
+        "gruntfuggly.todo-tree",
+        "anthropic.claude-code"
     ]
 }

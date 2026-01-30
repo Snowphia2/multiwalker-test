@@ -78,15 +78,13 @@ class ContactDetector(contactListener):
                     if self.env.package != contact.fixtureA.body:
                         self.env.fallen_walkers[i] = True
 
-        # # if package is on the ground
-        # if self.env.package == contact.fixtureA.body:
-        #     if contact.fixtureB.body not in [w.hull for w in self.env.walkers]:
-        #         self.env.game_over = True
-        # if self.env.package == contact.fixtureB.body:
-        #     if contact.fixtureA.body not in [w.hull for w in self.env.walkers]:
-        #         self.env.game_over = True
-
-        # self.env.game_over = True
+        # if package touches ground (not walker)
+        if self.env.package == contact.fixtureA.body:
+            if contact.fixtureB.body not in [w.hull for w in self.env.walkers]:
+                self.env.package_touched_ground = True
+        if self.env.package == contact.fixtureB.body:
+            if contact.fixtureA.body not in [w.hull for w in self.env.walkers]:
+                self.env.package_touched_ground = True
         for walker in self.env.walkers:
             if walker.hull is not None:
                 for leg in [walker.legs[1], walker.legs[3]]:
@@ -424,6 +422,12 @@ class MultiWalkerEnv:
     
     def get_all_angle_history(self):
         return self.all_angle_history
+    
+    def get_all_package_contact_history(self):
+        """Returns the package ground contact history for all episodes"""
+        if hasattr(self, 'all_package_contact_history'):
+            return self.all_package_contact_history
+        return []
 
     def get_all_rewards_history(self):
         return self.all_rewards_history
@@ -497,6 +501,7 @@ class MultiWalkerEnv:
         self.world.contactListener = self.world.contactListener_bug_workaround
         self.game_over = False
         self.fallen_walkers = np.zeros(self.n_walkers, dtype=bool)
+        self.package_touched_ground = False  # Track if package touched ground
         self.prev_shaping = np.zeros(self.n_walkers)
         self.prev_package_shaping = 0.0
         self.scroll = 0.0
@@ -504,10 +509,22 @@ class MultiWalkerEnv:
         
         self.angel_list.append(self.total_package_angle)
         
+        # 在重置之前，保存上一个episode的角度历史（如果有数据的话）
+        if hasattr(self, 'angle_history') and len(self.angle_history) > 0:
+            self.all_angle_history.append(self.angle_history)
+            # Record if package touched ground in this episode
+            if not hasattr(self, 'all_package_contact_history'):
+                self.all_package_contact_history = []
+            self.all_package_contact_history.append(self.package_touched_ground)
+            if hasattr(self, 'all_rewards') and len(self.all_rewards) > 0:
+                self.all_rewards_history.append(self.all_rewards)
+        
         self.total_package_angle = 0.0
         self.total_steps = 0
 
         self.angle_history = []
+        self.all_rewards = []
+        self.package_touched_ground = False  # Reset for new episode
         self.obs_get = defaultdict(list)
 
 
@@ -669,12 +686,13 @@ class MultiWalkerEnv:
                 # print("self.last_rewards: ", self.last_rewards[0])
                 self.total_steps += 1
                 # print("total_steps: ", self.total_steps)
-                if self.total_steps == 2000:
-                    self.all_angle_history.append(self.angle_history)
-                    self.all_rewards_history.append(self.all_rewards)
-                    segment_log_path = "/root/2507-multiwalker-harl/angle_log.txt"
-                    with open(segment_log_path, "a", encoding="utf-8") as _f:
-                        _f.write(f"toßtal_steps: {self.total_steps}, total_package_angle: {self.total_package_angle}\n")
+                # 注释掉旧逻辑：现在在reset()时保存角度历史，不再依赖特定步数
+                # if self.total_steps == 2000:
+                #     self.all_angle_history.append(self.angle_history)
+                #     self.all_rewards_history.append(self.all_rewards)
+                #     segment_log_path = "/root/2507-multiwalker-harl/angle_log.txt"
+                #     with open(segment_log_path, "a", encoding="utf-8") as _f:
+                #         _f.write(f"total_steps: {self.total_steps}, total_package_angle: {self.total_package_angle}\n")
 
         if self.render_mode == "human":
             self.render()

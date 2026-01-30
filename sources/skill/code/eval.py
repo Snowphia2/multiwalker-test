@@ -18,6 +18,7 @@ from moviepy.video.io.VideoFileClip import VideoFileClip
 import imageio
 from typing import cast
 from enum import Enum
+import numpy as np
 import sys
 
 os.environ["SDL_VIDEODRIVER"] = "dummy"
@@ -61,7 +62,7 @@ def _to_harl_dict(
 
     if hasattr(cfg.eval_scenario, "events") and cfg.eval_scenario.events is not None:
         env_dict["events"] = _to_dict(cfg.eval_scenario)["events"]
-
+    
 
     return (
         algo_dict,
@@ -79,9 +80,15 @@ def export_gif(config_name, frames_arr, rewards_arr):
     # 文件夹
 
     rich.print(f"Exporting gif for {config_name}")
-    gif_dir = os.path.join(
-        hydra.core.hydra_config.HydraConfig.get().runtime.output_dir, "./videos/"
-    )
+    
+    # 尝试获取Hydra输出目录，如果失败则使用默认目录
+    try:
+        base_dir = hydra.core.hydra_config.HydraConfig.get().runtime.output_dir
+        gif_dir = os.path.join(base_dir, "./videos/")
+    except ValueError:
+        # HydraConfig未设置（使用hydra.compose时），使用默认目录
+        gif_dir = "./results/renders/"
+    
     gif_folder = os.path.join(gif_dir, f"{config_name}")
     os.makedirs(gif_folder, exist_ok=True)
 
@@ -96,7 +103,7 @@ def export_gif(config_name, frames_arr, rewards_arr):
         imageio.mimwrite(
             gif_path,
             frames,
-            duration=10,
+            fps=10,
         )
 
         # 3. 视频生成
@@ -306,6 +313,7 @@ def eval(
     else:
         # 根据是否是off-policy，选择不同的eval方式
         angle_arr = []
+        package_contact_arr = []
         if is_online_policy:
             print("it is onpolicy")
             runner = cast(OnPolicyMARunner, runner)
@@ -319,6 +327,68 @@ def eval(
             terminate_arr = logger.test_data.get("terminate_at", [])
             if this_env_is_mw_series:
                 angle_arr = logger.test_data.get("angle_data", [])
+                
+                # 将线程级别数据转换为episode级别数据
+                def convert_thread_data_to_episodes(thread_angle_data, terminate_arr, n_threads):
+                    """
+                    将线程级别的角度数据转换为episode级别
+                    
+                    Args:
+                        thread_angle_data: list of list, thread_angle_data[tid] = 该线程的所有角度
+                        terminate_arr: list, terminate_arr[i] = Episode i 的终止步数
+                        n_threads: int, 并行线程数
+                    
+                    Returns:
+                        episode_angles: list of list, episode_angles[i] = Episode i 的角度数据
+                    """
+                    total_episodes = len(terminate_arr)
+                    episode_angles = []
+                    
+                    # 每个线程处理的episodes
+                    thread_cursors = [0] * n_threads  # 每个线程当前读取到的位置
+                    
+                    for ep_idx in range(total_episodes):
+                        thread_id = ep_idx % n_threads  # Episode被分配到哪个线程
+                        start = thread_cursors[thread_id]
+                        end = start + terminate_arr[ep_idx]
+                        
+                        # 从对应线程提取这个episode的数据
+                        if thread_id < len(thread_angle_data) and end <= len(thread_angle_data[thread_id]):
+                            ep_angles = thread_angle_data[thread_id][start:end]
+                            episode_angles.append(ep_angles)
+                            thread_cursors[thread_id] = end
+                        else:
+                            # 数据不足，添加空列表
+                            episode_angles.append([])
+                    
+                    return episode_angles
+                
+                # 应用转换：将线程级别数据转换为episode级别
+                n_threads = logger.algo_args["eval"]["n_eval_rollout_threads"]
+                angle_arr = convert_thread_data_to_episodes(angle_arr, terminate_arr, n_threads)
+                
+                # 获取package接触地面的数据
+                package_contact_arr = []
+                try:
+                    # Method 1: Get from logger.package_contact_history (collected during eval)
+                    if hasattr(logger, 'package_contact_history'):
+                        package_contact_arr = logger.package_contact_history
+                        print(f"[DEBUG] Collected {len(package_contact_arr)} package contact records from logger")
+                    else:
+                        # Method 2: Try to access environment directly (for DummyVecEnv)
+                        try:
+                            env_instance = runner.eval_envs.env
+                            if hasattr(env_instance, 'get_all_package_contact_history'):
+                                package_contact_arr = env_instance.get_all_package_contact_history()
+                                print(f"[DEBUG] Collected {len(package_contact_arr)} package contact records from environment")
+                        except (AttributeError, Exception):
+                            print(f"[DEBUG] No package contact history available")
+                            package_contact_arr = []
+                except Exception as e:
+                    print(f"Warning: Failed to get package contact history: {e}")
+                    import traceback
+                    traceback.print_exc()
+                    package_contact_arr = []
 
         else:
             print("it is offpolicy")
@@ -355,6 +425,8 @@ def eval(
         assert config.environment.env_tweak.max_cycles is not None
 
         if this_env_is_mw_series:
+            
+            
             angle_flatten = [
                 angle for episode_angles in angle_arr for angle in episode_angles
             ]
@@ -377,11 +449,26 @@ def eval(
                 "terminate_arr": terminate_arr,
                 "total_timesteps1": sum(terminate_arr),
                 # "angle_data": angle_flatten,
-                # "angle_data_grouped": angle_arr,
+                "angle_data_grouped": angle_arr,
+                "package_contact_arr": package_contact_arr,
             }
+            
+            # 添加扰动相关指标
+            if hasattr(config.environment.env_tweak, 'disturbance_mode') and config.environment.env_tweak.disturbance_mode == 'adaptive':
+                return_result["disturbance_config"] = {
+                    "target_agent": getattr(config.environment.env_tweak, 'disturb_target_agent', None),
+                    "magnitude": getattr(config.environment.env_tweak, 'disturb_magnitude', None)
+                }
+                
+                if logger and hasattr(logger, 'test_data'):
+                    mttf_values = [x for x in logger.test_data.get("mttf_data", []) if x is not None]
+                    recovery_values = [x for x in logger.test_data.get("recovery_time_data", []) if x is not None]
+                    max_angles = logger.test_data.get("max_angle_data", [])
+                    
+                    return_result["disturbance_mttf_avg"] = np.mean(mttf_values) if mttf_values else None
+                    return_result["disturbance_recovery_time_avg"] = np.mean(recovery_values) if recovery_values else None
+                    return_result["disturbance_max_angle"] = max(max_angles) if max_angles else None
             if is_online_policy:
-                import numpy as np
-
                 return_result["angle_data_avg"] = sum(angle_flatten) / len(
                     angle_flatten
                 )
@@ -398,11 +485,16 @@ def eval(
                 return_result["package_x"] = sum(package_x) / len(package_x)
 
                 results_dir = "/root/2507-multiwalker-harl/z_picture"
-                disabled_agent_id = config.environment.env_tweak.disabled_walker_id  
-                disturb = config.environment.env_tweak.disturb  
-                filename = f"agent_{disabled_agent_id}_disturb_‘{disturb}’.txt"
-                filepath = os.path.join(results_dir, filename)
-                if len(angle_flatten) > 0:
+                disabled_agent_id = getattr(config.environment.env_tweak, 'disabled_walker_id', None)
+                disturb = getattr(config.environment.env_tweak, 'disturb', None)
+                
+                if disabled_agent_id is not None and disturb is not None:
+                    filename = f"agent_{disabled_agent_id}_disturb_'{disturb}'.txt"
+                    filepath = os.path.join(results_dir, filename)
+                else:
+                    filepath = None
+                
+                if filepath and len(angle_flatten) > 0:
                     # 计算大于6.5的数据比例
                     threshold = 6.5
                     count_above_threshold = sum(1 for angle in angle_flatten if angle > threshold)
@@ -514,6 +606,47 @@ def eval(
     print(f"Evaluation time: {end_time - start_time} seconds")
 
 
+def plot_angle_time_graph(angle_data, save_path, config_info):
+    """绘制角度-时间变化图
+    
+    Args:
+        angle_data: 角度数据列表的列表 [[ep1_angles], [ep2_angles], ...]
+        save_path: 保存路径
+        config_info: 配置信息字典
+    """
+    import matplotlib.pyplot as plt
+    import numpy as np
+    
+    plt.figure(figsize=(12, 6))
+    color_cycle = plt.rcParams['axes.prop_cycle'].by_key()['color']
+    
+    for i, episode_angles in enumerate(angle_data):
+        x = np.arange(len(episode_angles))
+        y = np.array(episode_angles)
+        color = color_cycle[i % len(color_cycle)]
+        plt.plot(x, y, label=f'Episode {i+1}', color=color, alpha=0.7)
+    
+    # 绘制阈值线
+    plt.axhline(y=6.5, color='red', linestyle='--', linewidth=2, label='Failure Threshold (6.5°)')
+    plt.axhline(y=5.0, color='orange', linestyle='--', linewidth=2, label='Recovery Threshold (5.0°)')
+    
+    # 标注扰动注入时间点
+    if config_info.get('disturb_start_step'):
+        plt.axvline(x=config_info['disturb_start_step'], color='green', 
+                   linestyle=':', linewidth=2, label='Disturbance Injection')
+    
+    plt.xlabel('Time Steps', fontsize=12)
+    plt.ylabel('Package Angle (degrees)', fontsize=12)
+    plt.title(f"Agent {config_info.get('target_agent', 'N/A')}, "
+              f"Magnitude {config_info.get('magnitude', 'N/A')}", fontsize=14)
+    plt.legend(loc='best')
+    plt.grid(True, alpha=0.3)
+    plt.tight_layout()
+    plt.savefig(save_path, dpi=300, bbox_inches='tight')
+    plt.close()
+    print(f"Angle-time plot saved to: {save_path}")
+
+
 @hydra.main(
     config_path="../1.config/task/eval", config_name="default", version_base=None
 )
@@ -600,13 +733,12 @@ def main(cfg: EvalConfig):
                 place_suffix = "_".join(perturb_targets)
             else:
                 place_suffix = "no_perturb"
-
+            
             json_path = os.path.join(
                 save_dir, f"{env_name}_{algorithm_name}_{scenario_name}_{place_suffix}.json"
             )
             with open(json_path, "w", encoding="utf-8") as f:
                 json.dump(result, f, ensure_ascii=False, indent=2)
-        
         else:
             json_path = os.path.join(
                 save_dir, f"{env_name}_{algorithm_name}_{scenario_name}.json"
@@ -617,6 +749,273 @@ def main(cfg: EvalConfig):
         print(f"Results saved to: {json_path}")
 
         wandb.log(result)
+
+
+def filter_recovered_episodes(angle_data_grouped, terminate_arr, max_cycles=1000, package_contact_arr=None):
+    """
+    筛选"不稳定后恢复"的episodes
+    
+    过滤规则：
+    1. 正常完成（terminate_arr[i] == max_cycles）
+    2. Package未接触地面（新增，替代角度方差检查）
+    3. 曾经失稳（max(abs(angles)) > 6.5°）
+    4. 后来恢复（有步数 < 5.0°）
+    
+    Returns:
+        recovered: list of recovered episode info
+        episode_details: list of all episodes with filter reasons
+    """
+    recovered = []
+    episode_details = []
+    
+    print(f"\n[FILTER] Checking {len(angle_data_grouped)} episodes...")
+    
+    for idx, (angles, term_step) in enumerate(zip(angle_data_grouped, terminate_arr)):
+        print(f"\n[Episode {idx}]")
+        
+        episode_info = {
+            'episode_idx': idx,
+            'term_step': term_step,
+            'status': 'unknown',
+            'filter_reason': None,
+            'max_angle': None,
+            'std_angle': None,
+            'failure_step': None,
+            'recovery_step': None,
+            'recovery_time': None,
+            'first_unstable_step': None,
+            'last_unstable_step': None,
+            'unstable_duration': None
+        }
+        
+        # 基本检查
+        if not angles or len(angles) < 10:
+            msg = f"Too few data points: {len(angles) if angles else 0}"
+            print(f"  ✗ {msg}")
+            episode_info['status'] = 'filtered'
+            episode_info['filter_reason'] = msg
+            episode_details.append(episode_info)
+            continue
+        
+        angles_array = np.abs(np.array(angles))  # 使用绝对值
+        max_angle = np.max(angles_array)
+        std_angle = np.std(angles_array)
+        episode_info['max_angle'] = float(max_angle)
+        episode_info['std_angle'] = float(std_angle)
+        
+        # 计算第一次和最后一次失稳的步数（对所有episodes，包括失败的）
+        first_unstable_step = None
+        last_unstable_step = None
+        for j, angle in enumerate(angles):
+            if abs(angle) > 6.5:
+                if first_unstable_step is None:
+                    first_unstable_step = j
+                last_unstable_step = j  # 持续更新，记录最后一次
+        
+        episode_info['first_unstable_step'] = first_unstable_step
+        episode_info['last_unstable_step'] = last_unstable_step
+        if first_unstable_step is not None and last_unstable_step is not None:
+            episode_info['unstable_duration'] = last_unstable_step - first_unstable_step
+        
+        print(f"  Length: {len(angles)}, Term step: {term_step}")
+        print(f"  Max angle: {max_angle:.2f}°, Std: {std_angle:.2f}°")
+        if first_unstable_step is not None:
+            print(f"  First unstable: step {first_unstable_step}, Last unstable: step {last_unstable_step}")
+            if episode_info['unstable_duration'] is not None:
+                print(f"  Unstable duration: {episode_info['unstable_duration']} steps")
+        
+        # 保存完整角度数据（对所有有足够数据的episodes，不要求达到max_cycles）
+        # 只要angles数据足够长（>= 10个点），就保存
+        if len(angles) >= 10:
+            episode_info['angles'] = [float(a) for a in angles]
+        
+        # 过滤1：排除package接触地面的episodes（真正失败）
+        if package_contact_arr and idx < len(package_contact_arr):
+            if package_contact_arr[idx]:
+                msg = "Package touched ground (real failure)"
+                print(f"  ✗ {msg}")
+                episode_info['status'] = 'filtered'
+                episode_info['filter_reason'] = msg
+                episode_details.append(episode_info)
+                continue
+        
+        # 过滤2：排除角度数据异常的（全0）
+        if np.all(angles_array == 0):
+            msg = "Invalid data (all zeros)"
+            print(f"  ✗ {msg}")
+            episode_info['status'] = 'filtered'
+            episode_info['filter_reason'] = msg
+            episode_details.append(episode_info)
+            continue
+        
+        # 过滤3：排除提前摔倒的
+        if term_step < max_cycles:
+            msg = f"Early termination ({term_step} < {max_cycles})"
+            print(f"  ✗ {msg}")
+            episode_info['status'] = 'filtered'
+            episode_info['filter_reason'] = msg
+            episode_details.append(episode_info)
+            continue
+        
+        # 过滤4：排除全程稳定的（从未超过6.5°）
+        if max_angle < 6.5:
+            msg = f"Never unstable (max {max_angle:.2f}° < 6.5°)"
+            print(f"  ✗ {msg}")
+            episode_info['status'] = 'filtered'
+            episode_info['filter_reason'] = msg
+            episode_details.append(episode_info)
+            continue
+        
+        # 查找失效和恢复点（复用已计算的first_unstable_step）
+        failure_step = first_unstable_step
+        recovery_step = None
+        
+        # 从失效点之后找到第一个降到5°以下的点
+        if failure_step is not None:
+            for j in range(failure_step, len(angles)):
+                if abs(angles[j]) < 5.0:
+                    recovery_step = j
+                    break
+        
+        episode_info['failure_step'] = failure_step
+        episode_info['recovery_step'] = recovery_step
+        
+        print(f"  Failure at step: {failure_step}, Recovery at step: {recovery_step}")
+        
+        # 只保留真正恢复的（既失稳过，又恢复了）
+        if failure_step is not None and recovery_step is not None:
+            recovery_time = recovery_step - failure_step
+            episode_info['recovery_time'] = recovery_time
+            episode_info['status'] = 'recovered'
+            episode_info['filter_reason'] = f"RECOVERED! Recovery time: {recovery_time} steps"
+            print(f"  ✓ {episode_info['filter_reason']}")
+            
+            recovered.append({
+                'episode_idx': idx,
+                'angles': angles,
+                'max_angle': np.max(angles_array),
+                'failure_step': failure_step,
+                'recovery_step': recovery_step,
+                'recovery_time': recovery_time,
+                'first_unstable_step': first_unstable_step
+            })
+        else:
+            if failure_step is None:
+                msg = "Never failed (no angle > 6.5°)"
+            else:
+                msg = f"Failed but never recovered (no angle < 5.0° after step {failure_step})"
+            print(f"  ✗ {msg}")
+            episode_info['status'] = 'filtered'
+            episode_info['filter_reason'] = msg
+        
+        episode_details.append(episode_info)
+    
+    return recovered, episode_details
+
+
+def plot_recovered_cases_only(recovered_cases, save_dir, config_info):
+    """
+    只绘制恢复的episodes，每5个episodes一张图
+    """
+    import os
+    import matplotlib.pyplot as plt
+    
+    if not recovered_cases:
+        print("⚠️  No recovered episodes to plot")
+        return
+    
+    # 每5个episodes一张图
+    episodes_per_plot = 5
+    num_plots = (len(recovered_cases) + episodes_per_plot - 1) // episodes_per_plot
+    
+    for plot_idx in range(num_plots):
+        start_idx = plot_idx * episodes_per_plot
+        end_idx = min(start_idx + episodes_per_plot, len(recovered_cases))
+        cases_subset = recovered_cases[start_idx:end_idx]
+        
+        fig, ax = plt.subplots(figsize=(16, 9))
+        colors = plt.cm.tab10(np.linspace(0, 1, len(cases_subset)))
+        
+        for i, case in enumerate(cases_subset):
+            ep_idx = case['episode_idx']
+            angles = case['angles']
+            x = np.arange(len(angles))
+            y = np.abs(np.array(angles))  # 取绝对值
+            
+            # 绘制曲线
+            ax.plot(x, y, label=f'Ep {ep_idx+1}', 
+                   alpha=0.8, linewidth=2.5, color=colors[i])
+            
+            # 标注失效点（红×）
+            if case['failure_step']:
+                ax.scatter(case['failure_step'], abs(angles[case['failure_step']]), 
+                          color='red', s=180, marker='x', zorder=10, linewidths=3)
+            
+            # 标注恢复点（绿●）
+            if case['recovery_step']:
+                ax.scatter(case['recovery_step'], abs(angles[case['recovery_step']]), 
+                          color='green', s=180, marker='o', zorder=10, linewidths=2)
+        
+        # 阈值线
+        ax.axhline(y=6.5, color='red', linestyle='--', linewidth=2.5, 
+                   label='Failure Threshold (6.5°)', alpha=0.9)
+        ax.axhline(y=5.0, color='green', linestyle='--', linewidth=2.5, 
+                   label='Recovery Threshold (5.0°)', alpha=0.9)
+        ax.axvline(x=100, color='purple', linestyle=':', linewidth=2.5, 
+                   label='Disturbance Start (Step 100)', alpha=0.9)
+        
+        ax.set_xlabel('Steps', fontsize=14, fontweight='bold')
+        ax.set_ylabel('Pole Angle (degrees, absolute)', fontsize=14, fontweight='bold')
+        ax.set_title(
+            f"Recovered Episodes (Set {plot_idx+1}/{num_plots}) - "
+            f"Agent {config_info['target_agent']}, Magnitude {config_info['magnitude']}\n"
+            f"Episodes {start_idx+1}-{end_idx} of {len(recovered_cases)} total recovered", 
+            fontsize=16, fontweight='bold'
+        )
+        ax.legend(loc='best', fontsize=11, ncol=2)
+        ax.grid(True, alpha=0.3)
+        plt.tight_layout()
+        
+        # 保存图片
+        if num_plots > 1:
+            save_path = os.path.join(save_dir, f"recovered_episodes_set{plot_idx+1}.png")
+        else:
+            save_path = os.path.join(save_dir, "recovered_episodes.png")
+        
+        plt.savefig(save_path, dpi=300)
+        plt.close()
+        
+        print(f"✓ Plot {plot_idx+1}/{num_plots} saved: {save_path}")
+    
+    print(f"✓ Total recovered episodes: {len(recovered_cases)} in {num_plots} plot(s)")
+
+
+def print_recovery_stats(recovered_cases):
+    """打印恢复统计信息"""
+    if not recovered_cases:
+        print("\n⚠️  No recovered episodes found")
+        return
+    
+    print(f"\n{'='*70}")
+    print(f"RECOVERY STATISTICS")
+    print(f"{'='*70}")
+    print(f"Total recovered episodes: {len(recovered_cases)}")
+    
+    recovery_times = [c['recovery_time'] for c in recovered_cases if c['recovery_time']]
+    if recovery_times:
+        print(f"Average recovery time: {np.mean(recovery_times):.1f} steps")
+        print(f"Recovery time range: {np.min(recovery_times)} - {np.max(recovery_times)} steps")
+    
+    max_angles = [c['max_angle'] for c in recovered_cases]
+    print(f"Average max angle: {np.mean(max_angles):.2f}°")
+    print(f"Max angle range: {np.min(max_angles):.2f}° - {np.max(max_angles):.2f}°")
+
+    first_unstable_steps = [c['first_unstable_step'] for c in recovered_cases if c.get('first_unstable_step') is not None]
+    if first_unstable_steps:
+        print(f"Average first unstable step: {np.mean(first_unstable_steps):.1f}")
+        print(f"First unstable step range: {np.min(first_unstable_steps)} - {np.max(first_unstable_steps)}")
+
+    print(f"{'='*70}\n")
 
 
 if __name__ == "__main__":

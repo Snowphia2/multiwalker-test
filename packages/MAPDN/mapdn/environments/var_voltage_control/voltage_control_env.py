@@ -332,19 +332,20 @@ class VoltageControl(MultiAgentEnv):
         state = np.array(state)
         return state
 
-    def disturb_obs(self, x, obs_type: str, agent_id: int):   
-        target_agent = 3
-        if agent_id != target_agent or not (130 < self.steps < 180):
+    def disturb_obs(self, x, obs_type: str, agent_id: int):
+        target_agent = 1
+        if agent_id != target_agent or not (120 < self.steps < 130):
             return x
-        # 电压：绝对高斯噪声
-        if obs_type == "voltage":
-            bias = 0.1
-            return np.zeros_like(x)
 
-        # 2) 功率/PV：做倍增（对齐 action *= 3 的强度）
+        # 电压：极端偏置（接近1.0标幺值的上限）
+        if obs_type == "voltage":
+            bias = 0.8  # 电压通常是0.95-1.05，0.2的偏置非常显著
+            return x - np.ones_like(x) * bias
+
+        # 功率/PV：反转并大幅放大
         if obs_type in ("power", "pv"):
-            scale = 5.0
-            return -x
+            scale = 5.0  # 从5.0增加到10.0
+            return -x * scale
 
         return x
     
